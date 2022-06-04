@@ -5,18 +5,25 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/mmcdole/gofeed"
 )
 
 func main() {
+
+	resp, err := http.Get("https://www.cbc.ca/podcasting/includes/wr.xml")
+	if (err != nil) {
+		log.Fatal(err)
+	}
+
 	fmt.Println(
 `<!DOCTYPE html>
 <html lang="en">
 	<head>
 		<meta charset="utf-8">`)
 	fp := gofeed.NewParser()
-	feed, err := fp.ParseURL("https://www.cbc.ca/podcasting/includes/wr.xml")
+	feed, err := fp.Parse(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
