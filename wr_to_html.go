@@ -27,6 +27,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	
 	fmt.Printf("<title>%v</title>\n", feed.Title)
 	fmt.Println(
 `</head>
@@ -35,6 +36,21 @@ func main() {
 	fmt.Println("<div>")
 	fmt.Println(feed.Description)
 	fmt.Println("</div>")
+
+	for _, item := range feed.Items {
+		fmt.Printf("<h2>%v</h2>\n", item.Title)
+		for _, enclosure := range item.Enclosures {
+			// Object tag. Why not
+			fmt.Printf("<object data=\"%v\" type=\"%v\">\n", enclosure.URL, enclosure.Type)
+			// And an old-fashioned A tag for Lynx. Which does not support Objects.
+			fmt.Printf("<p><a href=\"%v\">Enclosure</a></p>\n", enclosure.URL)
+			fmt.Println("</object>")
+		}
+		fmt.Println("<div>")
+		fmt.Println(item.Description)
+		fmt.Println("</div>")
+	}
+
 	fmt.Println("</body>")
 	fmt.Println("</html>")
 }
