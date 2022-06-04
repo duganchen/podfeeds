@@ -20,20 +20,21 @@ func main() {
 	fmt.Println(
 `<!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">`)
+<head>
+<meta charset="utf-8">`)
 	fp := gofeed.NewParser()
 	feed, err := fp.Parse(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("		<title>%v</title>\n", feed.Title)
-	fmt.Println(`	</head>
-	<body>`)
-	fmt.Printf("		<h1>%v</h1>\n", feed.Title)
-	fmt.Println("	<div>")
+	fmt.Printf("<title>%v</title>\n", feed.Title)
+	fmt.Println(
+`</head>
+<body>`)
+	fmt.Printf("<h1>%v</h1>\n", feed.Title)
+	fmt.Println("<div>")
 	fmt.Println(feed.Description)
-	fmt.Println("	</div>")
-	fmt.Println("	</body>")
+	fmt.Println("</div>")
+	fmt.Println("</body>")
 	fmt.Println("</html>")
 }
