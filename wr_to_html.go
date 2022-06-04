@@ -49,6 +49,7 @@ func main() {
 			fmt.Printf("<p><a href=\"%v\">Enclosure</a></p>\n", enclosure.URL)
 			fmt.Println("</object>")
 		}
+		fmt.Printf("<p>%v</p>\n", item.PublishedParsed.Format("2006-01-02"))
 		fmt.Println("<div>")
 		fmt.Println(item.Description)
 		fmt.Println("</div>")
