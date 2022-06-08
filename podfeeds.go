@@ -34,9 +34,13 @@ The Go client just sends these by default:
 
 */
 
-type Feed struct {
-	title string
-	url string
+type Subscription struct {
+	Title string
+	Url string
+}
+
+type Subscriptions struct {
+	Subscriptions []Subscription
 }
 
 func main() {
@@ -56,7 +60,7 @@ func main() {
 			return
 		}
 
-		podcasts := []Feed{}
+		subscriptions := Subscriptions{}
 
 		// Can we use this more than once?
 		fp := gofeed.NewParser()
@@ -77,12 +81,12 @@ func main() {
 				return
 			}
 			
-			fd := Feed{parsed.Title, feed}
-			podcasts = append(podcasts, fd)
+			subscription := Subscription{parsed.Title, feed}
+			subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
 		}
 
 		t, _ := template.ParseFiles("./templates/index.html")
-		t.Execute(w, podcasts)
+		t.Execute(w, subscriptions)
 	}))
 
 	port, set := os.LookupEnv("PORT")
