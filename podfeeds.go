@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
+
+	"gopkg.in/yaml.v3"
 )
 
 /*
@@ -28,17 +29,13 @@ The Go client just sends these by default:
 */
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		for key, values := range r.Header {
-			fmt.Println(key, values)
-		}
-		fmt.Println()
+	podcasts := []string{"aa", "bb"}
 
-		w.Header().Set("ETag", "aaa")
-		w.Header().Set("Last-Modified", "Wed, 21 Oct 2015 07:28:00 GMT")
+	d, err := yaml.Marshal(podcasts)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-		fmt.Fprintf(w, "Hii there, I love %s!", r.URL.Path[1:])
+	fmt.Println(string(d))
 
-	})
-	log.Fatal(http.ListenAndServe(":8080", nil))
 }

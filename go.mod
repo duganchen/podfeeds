@@ -2,7 +2,10 @@ module github.com/duganchen/podfs
 
 go 1.17
 
-require github.com/mmcdole/gofeed v1.1.3
+require (
+	github.com/mmcdole/gofeed v1.1.3
+	gopkg.in/yaml.v3 v3.0.1
+)
 
 require (
 	github.com/PuerkitoBio/goquery v1.5.1 // indirect
