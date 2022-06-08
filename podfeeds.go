@@ -3,10 +3,13 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 
+	"html/template"
 	"net/http"
 
+	"github.com/mmcdole/gofeed"
 	"gopkg.in/yaml.v3"
 )
 
@@ -31,6 +34,11 @@ The Go client just sends these by default:
 
 */
 
+type Feed struct {
+	title string
+	url string
+}
+
 func main() {
 
 	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -48,15 +56,33 @@ func main() {
 			return
 		}
 
+		podcasts := []Feed{}
+
+		// Can we use this more than once?
+		fp := gofeed.NewParser()
+
 		// Seriously, just don't let the user enter duplicate feeds.
 		seen := make(map[string]bool)
+
 		for _, feed := range feeds {
 			if seen[feed] {
 				http.Error(w, "Duplicate feed", 500)
 				return
 			}
 			seen[feed] = true
+
+			parsed, err := fp.ParseURL(feed)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			
+			fd := Feed{parsed.Title, feed}
+			podcasts = append(podcasts, fd)
 		}
+
+		t, _ := template.ParseFiles("./templates/index.html")
+		t.Execute(w, podcasts)
 	}))
 
 	port, set := os.LookupEnv("PORT")
@@ -64,6 +90,6 @@ func main() {
 		port = "8080"
 	}
 	port = fmt.Sprintf(":%v", port)
-	http.ListenAndServe(port, nil)
+	log.Fatal(http.ListenAndServe(port, nil))
 }
 	
