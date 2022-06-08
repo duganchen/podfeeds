@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
+	"os"
+
+	"net/http"
 
 	"gopkg.in/yaml.v3"
 )
@@ -31,13 +33,22 @@ The Go client just sends these by default:
 
 func main() {
 
-	feeds := make([]string, 0)
-	buf, err := ioutil.ReadFile("./podcasts.yaml")
+	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		feeds := make([]string, 0)
+		buf, err := ioutil.ReadFile("./podcasts.yaml")
 
-	if err != nil {
-		log.Fatal(err)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+		}
+		yaml.Unmarshal(buf, &feeds)
+		fmt.Println(feeds)
+	}))
+
+	port, set := os.LookupEnv("PORT")
+	if !set {
+		port = "8080"
 	}
-	yaml.Unmarshal(buf, &feeds)
-	fmt.Println(feeds)
-
+	port = fmt.Sprintf(":%v", port)
+	http.ListenAndServe(port, nil)
 }
+	
