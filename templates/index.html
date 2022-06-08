@@ -8,12 +8,10 @@
 </head>
 <body>
     <h1>Podcasts</h1>
-    <ul>
 {{ range .Subscriptions }}
-        <li>
-            <a href="{{ .Url }}">{{ .Title }}</a>
-        </li>
+    <p>
+        <a href="{{ .Url }}">{{ .Title }}</a>
+    </p>
 {{ end }}
-    </ul>
 </body>
 </html>
