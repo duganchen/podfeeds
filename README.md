@@ -15,4 +15,6 @@ hyphen and a space. For example:
     - https://www.cbc.ca/podcasting/includes/wr.xml
     - https://www.cbc.ca/podcasting/includes/frontburner.xml
 
+By default, the server will listen on port 80. Set the PORT environment variable to override it.
+
 More to come....

@@ -39,9 +39,24 @@ func main() {
 
 		if err != nil {
 			http.Error(w, err.Error(), 500)
+			return
 		}
-		yaml.Unmarshal(buf, &feeds)
-		fmt.Println(feeds)
+		err = yaml.Unmarshal(buf, &feeds)
+
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		// Seriously, just don't let the user enter duplicate feeds.
+		seen := make(map[string]bool)
+		for _, feed := range feeds {
+			if seen[feed] {
+				http.Error(w, "Duplicate feed", 500)
+				return
+			}
+			seen[feed] = true
+		}
 	}))
 
 	port, set := os.LookupEnv("PORT")
