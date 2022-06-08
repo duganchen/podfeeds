@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 
 	"gopkg.in/yaml.v3"
@@ -29,13 +30,14 @@ The Go client just sends these by default:
 */
 
 func main() {
-	podcasts := []string{"aa", "bb"}
 
-	d, err := yaml.Marshal(podcasts)
+	feeds := make([]string, 0)
+	buf, err := ioutil.ReadFile("./podcasts.yaml")
+
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println(string(d))
+	yaml.Unmarshal(buf, &feeds)
+	fmt.Println(feeds)
 
 }
