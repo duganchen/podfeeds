@@ -10,10 +10,10 @@ import (
 	"github.com/mmcdole/gofeed"
 )
 
-func main() {
+func WR_to_html() {
 
 	resp, err := http.Get("https://www.cbc.ca/podcasting/includes/wr.xml")
-	if (err != nil) {
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -23,7 +23,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	
 	fmt.Println("<!DOCTYPE html>")
 	fmt.Printf("<html lang=\"%v\">\n", feed.Language)
 	fmt.Println("<head>")
@@ -31,7 +30,7 @@ func main() {
 
 	fmt.Printf("<title>%v</title>\n", feed.Title)
 	fmt.Println(
-`</head>
+		`</head>
 <body>`)
 	fmt.Printf("<h1><a href=\"%v\">%v</a></h1>\n", feed.FeedLink, feed.Title)
 

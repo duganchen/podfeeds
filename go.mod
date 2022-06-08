@@ -1,6 +1,6 @@
 module github.com/duganchen/podfs
 
-go 1.18
+go 1.17
 
 require github.com/mmcdole/gofeed v1.1.3
 
