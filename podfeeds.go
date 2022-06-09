@@ -72,14 +72,12 @@ func main() {
 		for _, feed := range feeds {
 			if seen[feed] {
 				http.Error(w, "Duplicate feed", 500)
-				return
 			}
 			seen[feed] = true
 
 			parsed, err := fp.ParseURL(feed)
 			if err != nil {
 				http.Error(w, err.Error(), 500)
-				return
 			}
 			
 			subscription := Subscription{parsed.Title, "/podcast?url=" + url.QueryEscape(feed)}
@@ -88,6 +86,15 @@ func main() {
 
 		t, _ := template.ParseFiles("./templates/index.html")
 		t.Execute(w, subscriptions)
+	})
+
+	http.HandleFunc("/podcast", func(w http.ResponseWriter, r *http.Request) {
+		url := r.URL.Query().Get("url")
+
+		if url == "" {
+			http.Error(w, "Missing parameter 'url'", 400)
+		}
+		fmt.Fprintf(w, url)
 	})
 
 	port, set := os.LookupEnv("PORT")
