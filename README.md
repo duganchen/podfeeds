@@ -1,9 +1,7 @@
 # podfeeds
-This is to be a podcast aggregator to use with [Lynx](https://lynx.invisible-island.net/)
+This is intended to be, functionally, a TUI podcast aggregator.
 
-Watch this space.
-
-It will require you to supply podcast feed URIs. One way to find them is to
+First, gather your podcast feed URIs. One way to find them is to
 use the "podfeed" script I posted here:
 
 [CLI app to get podcast feed URLs

@@ -8,6 +8,7 @@ import (
 
 	"html/template"
 	"net/http"
+	"net/url"
 
 	"github.com/mmcdole/gofeed"
 	"gopkg.in/yaml.v3"
@@ -45,7 +46,7 @@ type Subscriptions struct {
 
 func main() {
 
-	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		feeds := make([]string, 0)
 		buf, err := ioutil.ReadFile("./podcasts.yaml")
 
@@ -81,13 +82,13 @@ func main() {
 				return
 			}
 			
-			subscription := Subscription{parsed.Title, feed}
+			subscription := Subscription{parsed.Title, "/podcast?url=" + url.QueryEscape(feed)}
 			subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
 		}
 
 		t, _ := template.ParseFiles("./templates/index.html")
 		t.Execute(w, subscriptions)
-	}))
+	})
 
 	port, set := os.LookupEnv("PORT")
 	if !set {
