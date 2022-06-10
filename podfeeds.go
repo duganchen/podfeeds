@@ -65,6 +65,22 @@ func main() {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+
+		/*
+
+		Okay, how to do this...
+
+		Check for "/" in the cache.
+		If it exists, check its modification time.
+
+		If it exists in the cache and its modification time matches the
+		subscriptions list, then return what's cached.
+
+		Otherwise, clear the cache, and rebuild it by fetching and rendering
+		all the pages including this one.
+
+		*/
+
 		feeds := make([]string, 0)
 		buf, err := ioutil.ReadFile("./podcasts.yaml")
 
