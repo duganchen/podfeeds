@@ -15,4 +15,4 @@
 # vendor/
 
 podcasts.yaml
-cache
+cache.sqlite3

@@ -1,6 +1,9 @@
 package main
 
 import (
+	"database/sql"
+	"github.com/mattn/go-sqlite3"
+
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -45,6 +48,20 @@ type Subscriptions struct {
 }
 
 func main() {
+	
+	database, err := sql.Open("sqlite3", "./cache.sqlite3")
+	if (err != nil) {
+		log.Fatal(err)
+	}
+
+	statement, err := database.Prepare("CREATE TABLE IF NOT EXISTS Pages (URL TEXT PRIMARY KEY, LastModified TEXT, ETag Text, HTML Text)")
+	if (err != nil) {
+		log.Fatal(err)
+	}
+	_, err = statement.Exec()
+	if (err != nil) {
+		log.Fatal(err)
+	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		feeds := make([]string, 0)
