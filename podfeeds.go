@@ -2,7 +2,8 @@ package main
 
 import (
 	"database/sql"
-	"github.com/mattn/go-sqlite3"
+
+	_ "github.com/mattn/go-sqlite3"
 
 	"fmt"
 	"io/ioutil"
