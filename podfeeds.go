@@ -112,7 +112,7 @@ func main() {
 		if url == "" {
 			http.Error(w, "Missing parameter 'url'", 400)
 		}
-		fmt.Fprintf(w, url)
+		fmt.Fprint(w, url)
 	})
 
 	port, set := os.LookupEnv("PORT")
