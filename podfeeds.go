@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"database/sql"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -125,6 +126,14 @@ func main() {
 		
 		// Look. We know there's nothing in the cache yet. Keep going.
 
+		// Print out all the headers
+		// https://stackoverflow.com/a/47557484/240515
+		for name, values := range r.Header {
+			// Loop over all values for the name.
+			for _, value := range values {
+				fmt.Println(name, value)
+			}
+		}
 
 		feeds := make([]string, 0)
 
@@ -171,8 +180,27 @@ func main() {
 		t.Execute(writer, subscriptions)
 		writer.Close()
 
-		w.Header().Add("Content-Encoding","gzip")
-		w.Write(buff.Bytes())
+
+		encodings := r.Header["Accept-Encoding"]
+		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip") 
+
+		if compress {
+			fmt.Println("Compressed")
+			w.Header().Add("Content-Encoding", "gzip")
+			w.Write(buff.Bytes())
+		} else {
+			fmt.Println("NOt compressed")
+			reader, err := gzip.NewReader(buff)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			body, err := ioutil.ReadAll(reader)
+			if err != nil {
+				log.Fatal(err)
+			} 
+			w.Write(body)
+		}
 
 	})
 
