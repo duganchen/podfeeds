@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -163,7 +164,9 @@ func main() {
 		}
 
 		t, _ := template.ParseFiles("./templates/index.html")
-		t.Execute(w, subscriptions)
+		var buff bytes.Buffer
+		t.Execute(&buff, subscriptions)
+		w.Write(buff.Bytes())
 	})
 
 	http.HandleFunc("/podcast", func(w http.ResponseWriter, r *http.Request) {
