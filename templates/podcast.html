@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="{{ .Language }}">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ podcast.Title }}</title>
+</head>
+<body>
+    <h1><a href="{{ .FeedLink }}">{{ .Title }}</a></h1>
+
+    <p><img src="{{ podcast.Image.URL }}" alt="{{ .Image.Title }}"></p>
+
+    <div>
+        {{ feed.Description }}
+    </div>
+
+{{ range .Enclosures }}
+    <object data=" {{ .URL }} type="{{ .Type }}">
+        <p>
+            <a href="{{ .URL }}">Enclosure</a>
+        </p>
+    </object>
+{{ end }}
+
+    <table>
+{{ range .Metadata }}
+        <tr>
+            <th>{{ .Key }}</th>
+            <td>{{ .Value }}</td>
+        </tr>
+{{ end }}
+    </table>
+</body>
+</html>
