@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"compress/gzip"
 	"database/sql"
 
@@ -163,12 +164,15 @@ func main() {
 			subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
 		}
 
-		w.Header().Add("Content-Encoding","gzip")
 
 		t, _ := template.ParseFiles("./templates/index.html")
-		writer := gzip.NewWriter(w)
+		buff := new(bytes.Buffer)
+		writer := gzip.NewWriter(buff)
 		t.Execute(writer, subscriptions)
 		writer.Close()
+
+		w.Header().Add("Content-Encoding","gzip")
+		w.Write(buff.Bytes())
 
 	})
 
