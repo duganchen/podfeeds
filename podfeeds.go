@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bytes"
+	"compress/gzip"
 	"database/sql"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -163,10 +163,13 @@ func main() {
 			subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
 		}
 
+		w.Header().Add("Content-Encoding","gzip")
+
 		t, _ := template.ParseFiles("./templates/index.html")
-		var buff bytes.Buffer
-		t.Execute(&buff, subscriptions)
-		w.Write(buff.Bytes())
+		writer := gzip.NewWriter(w)
+		t.Execute(writer, subscriptions)
+		writer.Close()
+
 	})
 
 	http.HandleFunc("/podcast", func(w http.ResponseWriter, r *http.Request) {
