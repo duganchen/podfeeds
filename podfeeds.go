@@ -48,6 +48,25 @@ type Subscriptions struct {
 	Subscriptions []Subscription
 }
 
+type Metadata struct {
+	Key string
+	Value string
+}
+
+type Enclosure struct {
+	URL string
+	Type string
+}
+
+type Podcast struct {
+	Language string
+	FeedLink string
+	ImageURL string
+	ImageTitle string
+	Enclosures []string
+	Metadata []Metadata
+}
+
 func main() {
 	
 	database, err := sql.Open("sqlite3", "./cache.sqlite3")
@@ -55,7 +74,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	statement, err := database.Prepare("CREATE TABLE IF NOT EXISTS Pages (URL TEXT PRIMARY KEY, LastModified TEXT, ETag Text, HTML Text)")
+	statement, err := database.Prepare("CREATE TABLE IF NOT EXISTS Pages (URL TEXT PRIMARY KEY, LastModified TEXT, ETag Text, HTML BLOB)")
 	if (err != nil) {
 		log.Fatal(err)
 	}
@@ -81,7 +100,25 @@ func main() {
 
 		*/
 
+		// stat, err := os.Stat("./podcasts.yaml")
+		// if (err != nil) {
+		// 	log.Fatal(err)
+		// }
+
+		// Check syntax when there's actually something here
+		// cached, err := database.Query("SELECT * FROM Pages WHERE URL = '/'")
+
+		// Okay, I guess we need to loop through this manually.
+
+
+		// mtime := stat.ModTime().Format((http.TimeFormat))
+
+		
+		// Look. We know there's nothing in the cache yet. Keep going.
+
+
 		feeds := make([]string, 0)
+
 		buf, err := ioutil.ReadFile("./podcasts.yaml")
 
 		if err != nil {
