@@ -67,6 +67,13 @@ type Podcast struct {
 	Metadata []Metadata
 }
 
+type Page struct {
+	URL string
+	ETag string
+	LastModified string
+	HTML []byte
+}
+
 func main() {
 	
 	database, err := sql.Open("sqlite3", "./cache.sqlite3")
