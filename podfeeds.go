@@ -320,12 +320,30 @@ func main() {
 			page := new(bytes.Buffer)
 			writer := gzip.NewWriter(page)
 			writer.Write(pageBuilder.Bytes())
+			writer.Close()
 
 			statement, err = database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
 			if (err != nil) {
 				log.Fatal(err)
 			}
-			_, err = statement.Exec(feed, resp.Header[http.CanonicalHeaderKey("ETag")], resp.Header["Last-Modified"], pageBuilder.Bytes())
+
+			etags := resp.Header[http.CanonicalHeaderKey("ETag")]
+			var etag string
+			if len(etags) > 0 {
+				etag = etags[0]
+			} else {
+				etag = ""
+			}
+
+			lastModifieds := resp.Header[http.CanonicalHeaderKey("Last-Modified")]
+			var lastModified string
+			if len(lastModifieds) > 0 {
+				lastModified = lastModifieds[0]
+			} else {
+				lastModified = ""
+			}
+	
+			_, err = statement.Exec(feed, etag, lastModified, page.Bytes())
 			if err != nil {
 				log.Fatal(err)
 			}
