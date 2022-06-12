@@ -18,6 +18,12 @@
 {{ range .Items }}
     <h2>{{ .Title }}</h2>
 
+    <p><img src="{{ .ImageURL }}" alt="{{ .ImageTitle }}"></p>
+
+    <div>
+        {{ .Description }}
+    </div>
+
 {{ range .Enclosures }}
     <object data="{{ .URL }}" type="{{ .Type }}">
         <p>
@@ -26,11 +32,6 @@
     </object>
 {{ end }}
 
-    <p><img src="{{ .ImageURL }}" alt="{{ .ImageTitle }}"></p>
-
-    <div>
-        {{ .Description }}
-    </div>
 
     <table>
 {{ range .Metadata }}

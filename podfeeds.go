@@ -259,6 +259,7 @@ func main() {
 			for _, parsedItem := range parsed.Items {
 				var item Item
 				item.Description = parsedItem.Description
+				item.Title = parsedItem.Title
 
 				if parsedItem.Image != nil {
 					item.ImageTitle = parsedItem.Image.Title
