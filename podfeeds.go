@@ -66,6 +66,8 @@ type Item struct {
 	Metadata []Metadata
 	Title string
 	Description string
+	ImageTitle string
+	ImageURL string
 }
 
 type Podcast struct {
@@ -211,11 +213,6 @@ func main() {
 				log.Fatal(err)
 			}
 
-			// parsed, err := fp.ParseURL(feed)
-			// if err != nil {
-			// 	http.Error(w, err.Error(), 500)
-			// }
-			
 			subscription := Subscription{parsed.Title, "/podcast?url=" + url.QueryEscape(feed)}
 			subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
 
@@ -257,11 +254,52 @@ func main() {
 				podcast.Metadata = append(podcast.Metadata, Metadata{"Generator", parsed.Generator})
 			}
 
-			for _, enclosure := range parsed.Items {
-				podcast.Enclosures = append(podcast.Enclosures, Enclosure{})
+			for _, parsedItem := range parsed.Items {
+				var item Item
+				item.Description = parsedItem.Description
+
+				item.ImageTitle = parsedItem.Image.Title
+				item.ImageURL = parsedItem.Image.URL
+
+				for _, enclosure := range parsedItem.Enclosures {
+					item.Enclosures = append(item.Enclosures, Enclosure{enclosure.URL, enclosure.Type})
+				}
+
+				if parsedItem.Updated != "" {
+					item.Metadata = append(item.Metadata, Metadata{"Updated", parsedItem.Updated})
+				}
+
+				if parsedItem.Published != "" {
+					item.Metadata = append(item.Metadata, Metadata{"Published", parsedItem.Published})
+				}
+
+				if parsedItem.Content != "" {
+					item.Metadata = append(item.Metadata, Metadata{"Content", parsedItem.Content})
+				}
+
+				if parsedItem.Link != "" {
+					item.Metadata = append(item.Metadata, Metadata{"Link", parsedItem.Link})
+				}
+
+				if len(parsedItem.Authors) > 0 {
+					var authorsBuilder strings.Builder
+					for _, author := range parsedItem.Authors {
+						authorsBuilder.WriteString(author.Name)
+						authorsBuilder.WriteString(" (")
+						authorsBuilder.WriteString(author.Email)
+						authorsBuilder.WriteString(") ")
+					}
+					item .Metadata = append(item.Metadata, Metadata{"Authors", authorsBuilder.String()})
+				}
+
+				if len(parsedItem.Categories) > 0 {
+					item.Metadata = append(item.Metadata, Metadata{"Categories", strings.Join(parsedItem.Categories, "/")})
+				}
+
+				podcast.Items = append(podcast.Items, item)
 			}
 
-			// TODO: use currency to render all the pages simultaneously
+			// TODO: use concurrency to render all the pages simultaneously
 		
 		}
 
