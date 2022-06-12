@@ -12,14 +12,14 @@
     <p><img src="{{ .ImageURL }}" alt="{{ .ImageTitle }}"></p>
 
     <div>
-        {{ feed.Description }}
+        {{ .Description }}
     </div>
 
 {{ range .Items }}
     <h2>.Title</h2>
 
 {{ range .Enclosures }}
-    <object data=" {{ .URL }} type="{{ .Type }}">
+    <object data="{{ .URL }}" type="{{ .Type }}">
         <p>
             <a href="{{ .URL }}">Enclosure</a>
         </p>
