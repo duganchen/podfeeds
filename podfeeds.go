@@ -115,26 +115,6 @@ func main() {
 			log.Fatal(err)
 		}
 
-		// Check syntax when there's actually something here
-		// cached, err := database.Query("SELECT * FROM Pages WHERE URL = '/'")
-
-		// Okay, I guess we need to loop through this manually.
-
-
-		// mtime := stat.ModTime().Format((http.TimeFormat))
-
-		
-		// Look. We know there's nothing in the cache yet. Keep going.
-
-		// Print out all the headers
-		// https://stackoverflow.com/a/47557484/240515
-		for name, values := range r.Header {
-			// Loop over all values for the name.
-			for _, value := range values {
-				fmt.Println(name, value)
-			}
-		}
-
 		feeds := make([]string, 0)
 
 
@@ -165,6 +145,7 @@ func main() {
 					log.Fatal(err)
 				}
 				body, err := ioutil.ReadAll(reader)
+				reader.Close()
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -172,6 +153,17 @@ func main() {
 			}
 
 			return
+		} else {
+			statement, err := database.Prepare("DELETE FROM Pages WHERE URL = ?")
+			if err != nil {
+				log.Fatal(err)
+			}
+			_, err = statement.Exec("/")
+			if err != nil {
+				log.Fatal(err)
+			}
+			statement.Close()
+
 		}
 
 		buf, err := ioutil.ReadFile("./podcasts.yaml")
@@ -217,14 +209,11 @@ func main() {
 		t.Execute(writer, subscriptions)
 		writer.Close()
 
-
-		// ONLY DO THIS ONCE!!!!
-
-		// statement, err := database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
-		// if (err != nil) {
-		// 	log.Fatal(err)
-		// }
-		// statement.Exec("/", "", stat.ModTime().Format(http.TimeFormat), buff.Bytes())
+		statement, err = database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
+		if (err != nil) {
+			log.Fatal(err)
+		}
+		statement.Exec("/", "", stat.ModTime().Format(http.TimeFormat), buff.Bytes())
 
 		encodings := r.Header["Accept-Encoding"]
 		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
