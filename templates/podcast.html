@@ -4,16 +4,19 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ podcast.Title }}</title>
+    <title>{{ .Title }}</title>
 </head>
 <body>
-    <h1><a href="{{ .FeedLink }}">{{ .Title }}</a></h1>
+    <h1>{{ .Title }}</h1>
 
     <p><img src="{{ .ImageURL }}" alt="{{ .ImageTitle }}"></p>
 
     <div>
         {{ feed.Description }}
     </div>
+
+{{ range .Items }}
+    <h2>.Title</h2>
 
 {{ range .Enclosures }}
     <object data=" {{ .URL }} type="{{ .Type }}">
@@ -31,5 +34,16 @@
         </tr>
 {{ end }}
     </table>
+
+{{ end }}
+
+<table>
+{{ range .Metadata }}
+    <tr>
+        <th>{{ .Key }}</th>
+        <td>{{ .Value }}</td>
+    </tr>
+{{ end}}
+</table>
 </body>
 </html>
