@@ -140,6 +140,8 @@ func main() {
 		var index Page
 		row.Scan(&index.URL, &index.ETag, &index.LastModified, &index.HTML)
 
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
 		if index.LastModified == stat.ModTime().Format(http.TimeFormat) {
 			encodings := r.Header["Accept-Encoding"]
 			compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
