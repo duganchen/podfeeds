@@ -165,16 +165,10 @@ func main() {
 
 			return
 		} else {
-			statement, err := database.Prepare("DELETE FROM Pages WHERE URL = ?")
+			_, err := database.Query("DELETE FROM Pages")
 			if err != nil {
 				log.Fatal(err)
 			}
-			_, err = statement.Exec("/")
-			if err != nil {
-				log.Fatal(err)
-			}
-			statement.Close()
-
 		}
 
 		buf, err := ioutil.ReadFile("./podcasts.yaml")
@@ -322,9 +316,20 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Println("The podcast page")
-			fmt.Println(pageBuilder.String())
 
+			page := new(bytes.Buffer)
+			writer := gzip.NewWriter(page)
+			writer.Write(pageBuilder.Bytes())
+
+			statement, err = database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
+			if (err != nil) {
+				log.Fatal(err)
+			}
+			_, err = statement.Exec(feed, resp.Header[http.CanonicalHeaderKey("ETag")], resp.Header["Last-Modified"], pageBuilder.Bytes())
+			if err != nil {
+				log.Fatal(err)
+			}
+	
 			// TODO: use concurrency to render all the pages simultaneously
 		
 		}
