@@ -71,6 +71,7 @@ type Item struct {
 }
 
 type Podcast struct {
+	Title string
 	Language string
 	FeedLink string
 	ImageURL string
@@ -224,6 +225,7 @@ func main() {
 			podcast.FeedLink = parsed.FeedLink
 			podcast.ImageURL = parsed.Image.URL
 			podcast.ImageTitle = parsed.Image.Title
+			podcast.Title = parsed.Title
 
 			if parsed.Updated != "" {
 				podcast.Metadata = append(podcast.Metadata, Metadata{"Updated", parsed.Updated})
