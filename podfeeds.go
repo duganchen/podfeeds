@@ -193,15 +193,67 @@ func main() {
 			}
 			seen[feed] = true
 
-			parsed, err := fp.ParseURL(feed)
+			// TODO. We need the headers as well.
+
+			resp, err := http.Get(feed)
 			if err != nil {
-				http.Error(w, err.Error(), 500)
+				log.Fatal(err)
 			}
+			parsed, err := fp.Parse(resp.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			// parsed, err := fp.ParseURL(feed)
+			// if err != nil {
+			// 	http.Error(w, err.Error(), 500)
+			// }
 			
 			subscription := Subscription{parsed.Title, "/podcast?url=" + url.QueryEscape(feed)}
 			subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
 
 			// TODO: Rendering and caching the feed page goes here.
+			var podcast Podcast
+			podcast.Language = parsed.Language
+			podcast.FeedLink = parsed.FeedLink
+			podcast.ImageURL = parsed.Image.URL
+			podcast.ImageTitle = parsed.Image.Title
+
+			if parsed.Updated != "" {
+				podcast.Metadata = append(podcast.Metadata, Metadata{"Updated", parsed.Updated})
+			}
+
+			if parsed.Published != "" {
+				podcast.Metadata = append(podcast.Metadata, Metadata{"Published", parsed.Published})
+			}
+
+			if len(parsed.Authors) > 0 {
+				var authorsBuilder strings.Builder
+				for _, author := range parsed.Authors {
+					authorsBuilder.WriteString(author.Name)
+					authorsBuilder.WriteString(" (")
+					authorsBuilder.WriteString(author.Email)
+					authorsBuilder.WriteString(") ")
+				}
+				podcast.Metadata = append(podcast.Metadata, Metadata{"Authors", authorsBuilder.String()})
+			}
+
+			if len(parsed.Categories) > 0 {
+				podcast.Metadata = append(podcast.Metadata, Metadata{"Categories", strings.Join(parsed.Categories, "/")})
+			}
+
+			if parsed.Copyright != "" {
+				podcast.Metadata = append(podcast.Metadata, Metadata{"Copyright", parsed.Copyright})
+			}
+
+			if parsed.Generator != "" {
+				podcast.Metadata = append(podcast.Metadata, Metadata{"Generator", parsed.Generator})
+			}
+
+			for _, enclosure := range parsed.Items {
+				podcast.Enclosures = append(podcast.Enclosures, Enclosure{})
+			}
+
 			// TODO: use currency to render all the pages simultaneously
 		
 		}
