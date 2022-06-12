@@ -16,7 +16,7 @@
     </div>
 
 {{ range .Items }}
-    <h2>.Title</h2>
+    <h2>{{ .Title }}</h2>
 
 {{ range .Enclosures }}
     <object data="{{ .URL }}" type="{{ .Type }}">
