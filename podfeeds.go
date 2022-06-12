@@ -196,6 +196,8 @@ func main() {
 		// Seriously, just don't let the user enter duplicate feeds.
 		seen := make(map[string]bool)
 
+		fmt.Println("Looping through feeds")
+
 		for _, feed := range feeds {
 			if seen[feed] {
 				http.Error(w, "Duplicate feed", 500)
@@ -258,8 +260,14 @@ func main() {
 				var item Item
 				item.Description = parsedItem.Description
 
-				item.ImageTitle = parsedItem.Image.Title
-				item.ImageURL = parsedItem.Image.URL
+				if parsedItem.Image != nil {
+					item.ImageTitle = parsedItem.Image.Title
+					item.ImageURL = parsedItem.Image.URL
+				} else {
+					item.ImageTitle = ""
+					item.ImageURL = ""
+				}
+
 
 				for _, enclosure := range parsedItem.Enclosures {
 					item.Enclosures = append(item.Enclosures, Enclosure{enclosure.URL, enclosure.Type})
@@ -298,6 +306,20 @@ func main() {
 
 				podcast.Items = append(podcast.Items, item)
 			}
+
+			fmt.Println("Parsing podcast template")
+			pageTemplate, err := template.ParseFiles("./templates/podcast.html")
+			if err != nil {
+				log.Fatal(err)
+			}
+			
+			var pageBuilder bytes.Buffer
+			err = pageTemplate.Execute(&pageBuilder, podcast)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println("The podcast page")
+			fmt.Println(pageBuilder.String())
 
 			// TODO: use concurrency to render all the pages simultaneously
 		
