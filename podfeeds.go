@@ -84,7 +84,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	statement, err := database.Prepare("CREATE TABLE IF NOT EXISTS Pages (URL TEXT PRIMARY KEY, LastModified TEXT, ETag Text, HTML BLOB)")
+	statement, err := database.Prepare("CREATE TABLE IF NOT EXISTS Pages (URL TEXT PRIMARY KEY, ETag Text, LastModified TEXT, HTML BLOB)")
 	if (err != nil) {
 		log.Fatal(err)
 	}
@@ -137,6 +137,11 @@ func main() {
 
 		feeds := make([]string, 0)
 
+		stat, err := os.Stat("./podcasts.yaml")
+		if (err != nil) {
+			log.Fatal(err)
+		}
+
 		buf, err := ioutil.ReadFile("./podcasts.yaml")
 
 		if err != nil {
@@ -181,8 +186,17 @@ func main() {
 		writer.Close()
 
 
+		// ONLY DO THIS ONCE!!!!
+
+		statement, err := database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
+		if (err != nil) {
+			log.Fatal(err)
+		}
+		statement.Exec("/", "", stat.ModTime().Format(http.TimeFormat), buff.Bytes())
+
 		encodings := r.Header["Accept-Encoding"]
-		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip") 
+		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
+
 
 		if compress {
 			fmt.Println("Compressed")
