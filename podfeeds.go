@@ -397,7 +397,40 @@ func main() {
 		if url == "" {
 			http.Error(w, "Missing parameter 'url'", 400)
 		}
-		fmt.Fprint(w, url)
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		
+		statement, err := database.Prepare("SELECT * FROM Pages WHERE URL = ?")
+		if err != nil {
+			log.Fatal(err)
+		}
+		row := statement.QueryRow(url)
+		statement.Close()
+		var page Page
+		row.Scan(&page.URL, &page.ETag, &page.LastModified, &page.HTML)
+
+		encodings := r.Header["Accept-Encoding"]
+		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
+
+
+		if compress {
+			fmt.Println("Compressed")
+			w.Header().Add("Content-Encoding", "gzip")
+			w.Write(page.HTML)
+		} else {
+			fmt.Println("NOt compressed")
+			reader, err := gzip.NewReader(bytes.NewReader(page.HTML))
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			text, err := ioutil.ReadAll(reader)
+			if err != nil {
+				log.Fatal(err)
+			}
+			reader.Close()
+			w.Write(text)
+		}
 	})
 
 	port, set := os.LookupEnv("PORT")
