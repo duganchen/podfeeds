@@ -200,6 +200,10 @@ func main() {
 			
 			subscription := Subscription{parsed.Title, "/podcast?url=" + url.QueryEscape(feed)}
 			subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
+
+			// TODO: Rendering and caching the feed page goes here.
+			// TODO: use currency to render all the pages simultaneously
+		
 		}
 
 
