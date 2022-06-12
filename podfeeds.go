@@ -110,10 +110,10 @@ func main() {
 
 		*/
 
-		// stat, err := os.Stat("./podcasts.yaml")
-		// if (err != nil) {
-		// 	log.Fatal(err)
-		// }
+		stat, err := os.Stat("./podcasts.yaml")
+		if (err != nil) {
+			log.Fatal(err)
+		}
 
 		// Check syntax when there's actually something here
 		// cached, err := database.Query("SELECT * FROM Pages WHERE URL = '/'")
@@ -137,9 +137,41 @@ func main() {
 
 		feeds := make([]string, 0)
 
-		stat, err := os.Stat("./podcasts.yaml")
-		if (err != nil) {
+
+		statement, err  := database.Prepare("SELECT * FROM Pages WHERE URL = ?")
+		if err != nil {
 			log.Fatal(err)
+		}
+		defer statement.Close()
+
+
+		row := statement.QueryRow("/")
+		var index Page
+		row.Scan(&index.URL, &index.ETag, &index.LastModified, &index.HTML)
+
+		if index.LastModified == stat.ModTime().Format(http.TimeFormat) {
+			encodings := r.Header["Accept-Encoding"]
+			compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
+	
+	
+			if compress {
+				fmt.Println("Compressed")
+				w.Header().Add("Content-Encoding", "gzip")
+				w.Write(index.HTML)
+			} else {
+				byteReader := bytes.NewReader(index.HTML)
+				reader, err := gzip.NewReader(byteReader)
+				if err != nil {
+					log.Fatal(err)
+				}
+				body, err := ioutil.ReadAll(reader)
+				if err != nil {
+					log.Fatal(err)
+				}
+				w.Write(body)
+			}
+
+			return
 		}
 
 		buf, err := ioutil.ReadFile("./podcasts.yaml")
@@ -188,11 +220,11 @@ func main() {
 
 		// ONLY DO THIS ONCE!!!!
 
-		statement, err := database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
-		if (err != nil) {
-			log.Fatal(err)
-		}
-		statement.Exec("/", "", stat.ModTime().Format(http.TimeFormat), buff.Bytes())
+		// statement, err := database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
+		// if (err != nil) {
+		// 	log.Fatal(err)
+		// }
+		// statement.Exec("/", "", stat.ModTime().Format(http.TimeFormat), buff.Bytes())
 
 		encodings := r.Header["Accept-Encoding"]
 		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
