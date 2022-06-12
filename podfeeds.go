@@ -61,12 +61,19 @@ type Enclosure struct {
 	Type string
 }
 
+type Item struct {
+	Enclosures []Enclosure
+	Metadata []Metadata
+	Title string
+	Description string
+}
+
 type Podcast struct {
 	Language string
 	FeedLink string
 	ImageURL string
 	ImageTitle string
-	Enclosures []string
+	Items []Item
 	Metadata []Metadata
 }
 
