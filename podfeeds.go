@@ -88,7 +88,7 @@ type Page struct {
 	HTML []byte
 }
 
-func cacheFeed(feed string, database *sql.DB) (string, error) {
+func CacheFeed(feed string, database *sql.DB) (string, error) {
 	resp, err := http.Get(feed)
 	if err != nil {
 		return "", err
@@ -238,6 +238,21 @@ func cacheFeed(feed string, database *sql.DB) (string, error) {
 	return parsed.Title, nil
 }
 
+func LoadPage(url string, database *sql.DB) (Page, error) {
+	var page Page
+	statement, err := database.Prepare("SELECT * FROM Pages WHERE URL = ?")
+	if err != nil {
+		return page, err
+	}
+	row := statement.QueryRow(url)
+	defer statement.Close()
+	err = row.Scan(&page.URL, &page.ETag, &page.LastModified, &page.HTML)
+	if err == sql.ErrNoRows {
+		return page, err
+	}
+	return page, nil
+}
+
 func main() {
 	
 	database, err := sql.Open("sqlite3", "./cache.sqlite3")
@@ -317,16 +332,16 @@ func main() {
 
 
 			for _, feed := range feeds {
-				title, err := cacheFeed(feed, database)
+				// Look. We *could* fetch and render every page at the same time because we're using go, but
+				// that would be optimizing the path where the cache misses, and we kinda don't care about that
+				// by definition.
+				title, err := CacheFeed(feed, database)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				}
 				subscription := Subscription{title, "/podcast?url=" + url.QueryEscape(feed)}
-				subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
-		
-				// TODO: use concurrency to render all the pages simultaneously
-			
+				subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)		
 			}
 	
 	
@@ -389,22 +404,17 @@ func main() {
 			return
 		}
 
-
-		statement, err := database.Prepare("SELECT * FROM Pages WHERE URL = ?")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		row := statement.QueryRow(url)
-		statement.Close()
-		var page Page
-		err = row.Scan(&page.URL, &page.ETag, &page.LastModified, &page.HTML)
+		page, err := LoadPage(url, database)
 		if err == sql.ErrNoRows {
 			http.Error(w, "Podcast URL not found", http.StatusNotFound)
 			return
 		}
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-		// TODO: This is where we check for updates.
+		// TODO:
 		// None of my current feeds support ETag. So only going by Last-Modified only for now.
 		var client http.Client
 		req, err := http.NewRequest("GET", page.URL, nil)
@@ -423,10 +433,20 @@ func main() {
 		}
 
 		if (resp.StatusCode != http.StatusNotModified) {
-			// In this case, we need to recache.
+			_, err = CacheFeed(page.URL, database)
+			if (err != nil) {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 
-			// TODO: No I am not copy and pasting several screens worth of code from above.
-			// Extract it properly.
+			page, err = LoadPage(url, database)
+			if err == sql.ErrNoRows {
+				http.Error(w, "Podcast URL not found", http.StatusNotFound)
+				return
+			}
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 
 		encodings := r.Header["Accept-Encoding"]
