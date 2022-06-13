@@ -48,3 +48,5 @@ Follow "Enclosure" links to play them.
 ![Playing](images/playing.png)
 
 Or press "d" to download them or whatever; Lynx is very powerful.
+
+Note: You do need to load the 

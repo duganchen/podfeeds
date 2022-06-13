@@ -21,26 +21,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-/*
-Chrome:
-
-For an etag value of aaa:
-If-None-Match [aaa]
-
-For "Last-Modified", "Wed, 21 Oct 2015 07:28:00 GMT"
-We get
-If-Modified-Since [Wed, 21 Oct 2015 07:28:00 GMT]
-
-If both are set, then Chome sets both
-
-Lynx just caches unless you explictly specify no cache
-(x on a link, or C-r)
-
-The Go client just sends these by default:
-	User-Agent [Go-http-client/1.1]
-	Accept-Encoding [gzip]
-
-*/
 
 type Subscription struct {
 	Title string
@@ -205,8 +185,11 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 
 	page := new(bytes.Buffer)
 	writer := gzip.NewWriter(page)
-	writer.Write(pageBuilder.Bytes())
-	defer writer.Close()
+	_, err = writer.Write(pageBuilder.Bytes())
+	if err != nil {
+		return "", err
+	}
+	writer.Close()
 
 	statement, err := database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
 	if (err != nil) {
@@ -251,6 +234,33 @@ func LoadPage(url string, database *sql.DB) (Page, error) {
 		return page, err
 	}
 	return page, nil
+}
+
+func WriteResponse(w http.ResponseWriter, body []byte, r *http.Request) error {
+	encodings := r.Header["Accept-Encoding"]
+	compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
+
+
+	if compress {
+		w.Header().Add("Content-Encoding", "gzip")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write(body)
+	} else {
+		byteReader := bytes.NewReader(body)
+		reader, err := gzip.NewReader(byteReader)
+		if err != nil {
+			return err
+		}
+		defer reader.Close()
+		body, err := ioutil.ReadAll(reader)
+
+		if err != nil {
+			return err
+		}
+		w.Write(body)
+	}
+
+	return nil
 }
 
 func main() {
@@ -369,31 +379,11 @@ func main() {
 			}
 		}
 
-
-		encodings := r.Header["Accept-Encoding"]
-		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
-
-
-		if compress {
-			w.Header().Add("Content-Encoding", "gzip")
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Write(index.HTML)
-		} else {
-			byteReader := bytes.NewReader(index.HTML)
-			reader, err := gzip.NewReader(byteReader)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			body, err := ioutil.ReadAll(reader)
-			reader.Close()
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			w.Write(body)
+		err = WriteResponse(w, index.HTML, r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
-
 	})
 
 	http.HandleFunc("/podcast", func(w http.ResponseWriter, r *http.Request) {
@@ -449,27 +439,10 @@ func main() {
 			}
 		}
 
-		encodings := r.Header["Accept-Encoding"]
-		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
-
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		
-		if compress {
-			w.Header().Add("Content-Encoding", "gzip")
-			w.Write(page.HTML)
-		} else {
-			reader, err := gzip.NewReader(bytes.NewReader(page.HTML))
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			text, err := ioutil.ReadAll(reader)
-			if err != nil {
-				log.Fatal(err)
-			}
-			reader.Close()
-			w.Write(text)
+		err = WriteResponse(w, page.HTML, r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 	})
 
