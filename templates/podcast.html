@@ -9,25 +9,29 @@
 <body>
     <h1>{{ .Title }}</h1>
 
-    <p><img src="{{ .ImageURL }}" alt="{{ .ImageTitle }}"></p>
+{{ range .Images }}
+    <p><img src="{{ .URL }}" alt="{{ .Title }}"></p>
+{{ end }}
 
     <div>
         {{ .Description }}
     </div>
 
     <table>
-        {{ range .Metadata }}
-                <tr>
-                    <td>{{ .Key }}</td>
-                    <td>{{ .Value }}</td>
-                </tr>
-        {{ end}}
+{{ range .Metadata }}
+        <tr>
+            <td>{{ .Key }}</td>
+            <td>{{ .Value }}</td>
+        </tr>
+{{ end}}
     </table>
 
 {{ range .Items }}
     <h2>{{ .Title }}</h2>
 
-    <p><img src="{{ .ImageURL }}" alt="{{ .ImageTitle }}"></p>
+{{ range .Images }}
+    <p><img src="{{ .URL }}" alt="{{ .Title }}"></p>
+{{ end }}
 
     <div>
         {{ .Description }}

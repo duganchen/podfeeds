@@ -41,24 +41,29 @@ type Enclosure struct {
 	Type string
 }
 
+type Image struct {
+	Title string
+	URL string
+}
+
 type Item struct {
 	Enclosures []Enclosure
 	Metadata []Metadata
 	Title string
 	Description string
-	ImageTitle string
-	ImageURL string
+	Images []Image
+	Link string
 }
 
 type Podcast struct {
 	Title string
 	Description string
 	Language string
-	FeedLink string
-	ImageURL string
-	ImageTitle string
+	Images []Image
 	Items []Item
 	Metadata []Metadata
+	Link string
+	FeedLink string
 }
 
 type Page struct {
@@ -83,17 +88,14 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 
 	var podcast Podcast
 	podcast.Language = parsed.Language
-	podcast.FeedLink = parsed.FeedLink
-	if parsed.Image != nil {
-		podcast.ImageURL = parsed.Image.URL
-		podcast.ImageTitle = parsed.Image.Title
-	} else {
-		podcast.ImageURL = ""
-		podcast.ImageTitle = ""
-	}
+
+	podcast.Images = append(podcast.Images, Image{parsed.Image.Title, parsed.Image.URL})
 
 	podcast.Title = parsed.Title
 	podcast.Description = parsed.Description
+	
+	podcast.FeedLink = parsed.FeedLink
+	podcast.Link = parsed.Link
 
 	if parsed.Updated != "" {
 		podcast.Metadata = append(podcast.Metadata, Metadata{"Updated", parsed.Updated})
@@ -130,15 +132,11 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 		var item Item
 		item.Description = parsedItem.Description
 		item.Title = parsedItem.Title
+		item.Link = parsedItem.Link
 
 		if parsedItem.Image != nil {
-			item.ImageTitle = parsedItem.Image.Title
-			item.ImageURL = parsedItem.Image.URL
-		} else {
-			item.ImageTitle = ""
-			item.ImageURL = ""
+			item.Images = append(item.Images, Image{parsedItem.Image.Title, parsedItem.Image.URL})
 		}
-
 
 		for _, enclosure := range parsedItem.Enclosures {
 			item.Enclosures = append(item.Enclosures, Enclosure{enclosure.URL, enclosure.Type})
@@ -154,10 +152,6 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 
 		if parsedItem.Content != "" {
 			item.Metadata = append(item.Metadata, Metadata{"Content", parsedItem.Content})
-		}
-
-		if parsedItem.Link != "" {
-			item.Metadata = append(item.Metadata, Metadata{"Link", parsedItem.Link})
 		}
 
 		if len(parsedItem.Authors) > 0 {
