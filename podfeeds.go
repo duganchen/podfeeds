@@ -149,6 +149,7 @@ func main() {
 			if compress {
 				fmt.Println("Compressed")
 				w.Header().Add("Content-Encoding", "gzip")
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
 				w.Write(index.HTML)
 			} else {
 				byteReader := bytes.NewReader(index.HTML)
@@ -349,7 +350,8 @@ func main() {
 	
 			_, err = statement.Exec(feed, etag, lastModified, page.Bytes())
 			if err != nil {
-				http.Error(w, err.Error(), 500)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
 	
 			// TODO: use concurrency to render all the pages simultaneously
@@ -374,24 +376,28 @@ func main() {
 		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
 
 	
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
 
 
 		if compress {
 			fmt.Println("Compressed")
 			w.Header().Add("Content-Encoding", "gzip")
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Write(buff.Bytes())
 		} else {
 			fmt.Println("NOt compressed")
 			reader, err := gzip.NewReader(buff)
 			if err != nil {
-				http.Error(w, err.Error(), 500)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
 
 			body, err := ioutil.ReadAll(reader)
 			if err != nil {
-				http.Error(w, err.Error(), 500)
-			} 
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Write(body)
 		}
 
@@ -419,6 +425,35 @@ func main() {
 			http.Error(w, "Podcast URL not found", http.StatusNotFound)
 			return
 		}
+
+		// TODO: This is where we check for updates.
+		// None of my current feeds support ETag. So only going by Last-Modified only for now.
+		var client http.Client
+		req, err := http.NewRequest("GET", page.URL, nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if page.LastModified != "" {
+			fmt.Println(page.LastModified)
+			req.Header.Add("If-Modified-Since", page.LastModified)
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		
+		fmt.Println("The new page")
+		// Loop over header names
+		for name, values := range resp.Header {
+			// Loop over all values for the name.
+			for _, value := range values {
+				fmt.Println(name, value)
+			}
+		}
+
 
 		encodings := r.Header["Accept-Encoding"]
 		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
