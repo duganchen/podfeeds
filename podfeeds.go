@@ -141,7 +141,7 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		defer statement.Close()
+		statement.Close()
 
 
 		row := statement.QueryRow("/")
@@ -157,11 +157,12 @@ func main() {
 
 		if recache {
 
-
-			_, err := database.Query("DELETE FROM Pages")
+			// TODO: This does not do anything. I checked.
+			rows, err := database.Query("DELETE FROM Pages")
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
+			rows.Close()
 
 			subscriptions := Subscriptions{}
 
@@ -172,11 +173,13 @@ func main() {
 
 				resp, err := http.Get(feed)
 				if err != nil {
-					http.Error(w, err.Error(), 500)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
 				}
 				parsed, err := fp.Parse(resp.Body)
 				if err != nil {
-					http.Error(w, err.Error(), 500)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
 				}
 	
 				subscription := Subscription{parsed.Title, "/podcast?url=" + url.QueryEscape(feed)}
@@ -276,13 +279,15 @@ func main() {
 	
 				pageTemplate, err := template.ParseFiles("./templates/podcast.html")
 				if err != nil {
-					http.Error(w, err.Error(), 500)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
 				}
 				
 				var pageBuilder bytes.Buffer
 				err = pageTemplate.Execute(&pageBuilder, podcast)
 				if err != nil {
-					http.Error(w, err.Error(), 500)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
 				}
 	
 				page := new(bytes.Buffer)
@@ -291,8 +296,10 @@ func main() {
 				writer.Close()
 	
 				statement, err = database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
+				fmt.Println("Preparing insert")
 				if (err != nil) {
-					http.Error(w, err.Error(), 500)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
 				}
 	
 				etags := resp.Header[http.CanonicalHeaderKey("ETag")]
@@ -310,7 +317,8 @@ func main() {
 				} else {
 					lastModified = ""
 				}
-		
+				
+				fmt.Println("Inserting ", feed)
 				_, err = statement.Exec(feed, etag, lastModified, page.Bytes())
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -327,7 +335,8 @@ func main() {
 			writer := gzip.NewWriter(buff)
 			t.Execute(writer, subscriptions)
 			writer.Close()
-	
+			
+			fmt.Println("Preparing")
 			statement, err = database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
 			if (err != nil) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -339,7 +348,12 @@ func main() {
 			index.LastModified = stat.ModTime().Format(http.TimeFormat)
 			index.HTML = buff.Bytes()
 
-			statement.Exec(index.URL, index.ETag, index.LastModified, index.HTML)
+			fmt.Println("Inserting ", index.URL)
+			_, err = statement.Exec(index.URL, index.ETag, index.LastModified, index.HTML)
+			if (err != nil) {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 
 

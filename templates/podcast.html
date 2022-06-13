@@ -15,6 +15,15 @@
         {{ .Description }}
     </div>
 
+    <table>
+        {{ range .Metadata }}
+                <tr>
+                    <td>{{ .Key }}</td>
+                    <td>{{ .Value }}</td>
+                </tr>
+        {{ end}}
+    </table>
+
 {{ range .Items }}
     <h2>{{ .Title }}</h2>
 
@@ -36,7 +45,7 @@
     <table>
 {{ range .Metadata }}
         <tr>
-            <th>{{ .Key }}</th>
+            <td>{{ .Key }}</t>
             <td>{{ .Value }}</td>
         </tr>
 {{ end }}
@@ -44,13 +53,5 @@
 
 {{ end }}
 
-    <table>
-{{ range .Metadata }}
-        <tr>
-            <th>{{ .Key }}</th>
-            <td>{{ .Value }}</td>
-        </tr>
-{{ end}}
-    </table>
 </body>
 </html>
