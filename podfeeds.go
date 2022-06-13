@@ -84,8 +84,14 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 	var podcast Podcast
 	podcast.Language = parsed.Language
 	podcast.FeedLink = parsed.FeedLink
-	podcast.ImageURL = parsed.Image.URL
-	podcast.ImageTitle = parsed.Image.Title
+	if parsed.Image != nil {
+		podcast.ImageURL = parsed.Image.URL
+		podcast.ImageTitle = parsed.Image.Title
+	} else {
+		podcast.ImageURL = ""
+		podcast.ImageTitle = ""
+	}
+
 	podcast.Title = parsed.Title
 	podcast.Description = parsed.Description
 
