@@ -168,11 +168,6 @@ func main() {
 			// Can we use this more than once?
 			fp := gofeed.NewParser()
 	
-			// Seriously, just don't let the user enter duplicate feeds.
-			seen := make(map[string]bool)
-	
-			fmt.Println("Looping through feeds")
-	
 			for _, feed := range feeds {
 
 				resp, err := http.Get(feed)
@@ -279,7 +274,6 @@ func main() {
 					podcast.Items = append(podcast.Items, item)
 				}
 	
-				fmt.Println("Parsing podcast template")
 				pageTemplate, err := template.ParseFiles("./templates/podcast.html")
 				if err != nil {
 					http.Error(w, err.Error(), 500)
@@ -354,7 +348,6 @@ func main() {
 
 
 		if compress {
-			fmt.Println("Compressed")
 			w.Header().Add("Content-Encoding", "gzip")
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Write(index.HTML)
@@ -409,7 +402,6 @@ func main() {
 		}
 
 		if page.LastModified != "" {
-			fmt.Println(page.LastModified)
 			req.Header.Add("If-Modified-Since", page.LastModified)
 		}
 		resp, err := client.Do(req)
@@ -432,11 +424,9 @@ func main() {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		
 		if compress {
-			fmt.Println("Compressed")
 			w.Header().Add("Content-Encoding", "gzip")
 			w.Write(page.HTML)
 		} else {
-			fmt.Println("NOt compressed")
 			reader, err := gzip.NewReader(bytes.NewReader(page.HTML))
 			if err != nil {
 				log.Fatal(err)
