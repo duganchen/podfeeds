@@ -57,4 +57,4 @@ time of podcasts.yaml changes.
 
 Remember that Lynx requires you to refresh pages manually (by pressing C-r on a page, or following links with "x").
 
-Loading or refreshing a feed page will return the cached version if, and only if, the version on the server is identical to the one in the cache.
+Refreshing a feed page will return Podfeeds' cached version if, and only if, the version on the server has not changed since it was cached.
