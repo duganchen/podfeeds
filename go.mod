@@ -1,6 +1,6 @@
-module github.com/duganchen/podfs
+module github.com/duganchen/podfeeds
 
-go 1.17
+go 1.18
 
 require (
 	github.com/mattn/go-sqlite3 v1.14.13
