@@ -180,9 +180,6 @@ func main() {
 					return
 				}
 	
-				subscription := Subscription{parsed.Title, "/podcast?url=" + url.QueryEscape(feed)}
-				subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
-	
 				// TODO: Rendering and caching the feed page goes here.
 				var podcast Podcast
 				podcast.Language = parsed.Language
@@ -320,6 +317,9 @@ func main() {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				}
+
+				subscription := Subscription{parsed.Title, "/podcast?url=" + url.QueryEscape(feed)}
+				subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
 		
 				// TODO: use concurrency to render all the pages simultaneously
 			
