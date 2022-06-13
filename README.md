@@ -1,6 +1,6 @@
 # podfeeds
 
-This is a HTTP server-based podcast aggregator. Just as other aggregators use Chrome to present a GUI, this one uses Lynx
+This is an HTTP server-based podcast aggregator. Just as other aggregators use Chrome to present a GUI, this one uses Lynx
 to present a TUI.
 
 Set Lynx up to open media files in your favorite media player. For example, I have the following ~/.mailcap to get Lynx to
