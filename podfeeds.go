@@ -412,7 +412,9 @@ func main() {
 		}
 
 		// TODO:
-		// None of my current feeds support ETag. So only going by Last-Modified only for now.
+		// This has an ETag:
+		// http://feeds.feedburner.com/TEDTalks_video
+		// So support it.
 		var client http.Client
 		req, err := http.NewRequest("GET", page.URL, nil)
 		if err != nil {
