@@ -56,3 +56,6 @@ Podfeeds to build the page cache. The cache will then be rebuilt whenever the mo
 time of podcasts.yaml changes.
 
 Remember that Lynx requires you to refresh pages manually (by pressing C-r on a page, or following links with "x").
+
+Apart from that, there should be nothing you need to know. You don't need to restart the server or force refreshes in
+any other way.
