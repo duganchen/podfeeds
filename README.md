@@ -29,7 +29,7 @@ Start the server:
 
     go run .
 
-By default, the server will listen on port 80. Set the PORT environment variable to override it.
+By default, the server will listen on port 8080. Set the PORT environment variable to override it.
 
 Load the server's index page in Lynx:
 
