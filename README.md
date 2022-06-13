@@ -57,5 +57,4 @@ time of podcasts.yaml changes.
 
 Remember that Lynx requires you to refresh pages manually (by pressing C-r on a page, or following links with "x").
 
-Apart from that, there should be nothing you need to know. You don't need to restart the server or force refreshes in
-any other way.
+Apart from that, there should be nothing else you need to know in order to see up-to-date feeds.
