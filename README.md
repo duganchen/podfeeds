@@ -16,7 +16,7 @@ use the "podfeed" script I posted here:
 [CLI app to get podcast feed URLs
 ](https://www.linuxquestions.org/questions/linuxquestions-org-member-success-stories-23/cli-app-to-get-podcast-feed-urls-4175656322/)
 
-Paste them into a file in the root directory (same one with files like go.mod), named "podcasts.yaml". Separate each line with a
+Paste them into a file in the root directory (the one with files like go.mod), named "podcasts.yaml". Separate each line with a
 hyphen and a space. For example:
 
     - https://www.cbc.ca/podcasting/includes/wr.xml
