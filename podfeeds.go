@@ -366,6 +366,7 @@ func main() {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+			defer statement.Close()
 			
 			index.URL = "/"
 			index.ETag = ""
@@ -423,6 +424,19 @@ func main() {
 		}
 
 		if (resp.StatusCode != http.StatusNotModified) {
+
+			stmt, err := database.Prepare("DELETE FROM Pages WHERE URL = ?")
+			if (err != nil) {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			defer stmt.Close()
+			_, err = stmt.Exec(page.URL)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
 			_, err = CacheFeed(page.URL, database)
 			if (err != nil) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
