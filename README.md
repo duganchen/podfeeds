@@ -51,7 +51,7 @@ Or press "d" to download them or whatever; Lynx is very powerful.
 
 ## Notes on caching
 
-After writing podcasts.yaml and starting the server, you need to load "/" once to get
+After writing podcasts.yaml and starting the server for the first time, you need to load "/" once to get
 Podfeeds to build the page cache. The cache will then be rebuilt whenever the modification
 time of podcasts.yaml changes.
 
