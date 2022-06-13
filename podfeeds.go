@@ -63,7 +63,7 @@ type Podcast struct {
 	Items []Item
 	Metadata []Metadata
 	Link string
-	FeedLink string
+	// We don't care about FeedLink. It's a link to the XML file.
 }
 
 type Page struct {
@@ -94,7 +94,6 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 	podcast.Title = parsed.Title
 	podcast.Description = parsed.Description
 	
-	podcast.FeedLink = parsed.FeedLink
 	podcast.Link = parsed.Link
 
 	if parsed.Updated != "" {

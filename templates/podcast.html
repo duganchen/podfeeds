@@ -24,6 +24,12 @@
             <td>{{ .Value }}</td>
         </tr>
 {{ end}}
+{{ if .Link }}
+    <tr>
+        <td>Link</td>
+        <td><a href="{{ .Link }}">{{ .Link }}</a></td>
+    </tr>
+{{ end }}
     </table>
 
 {{ range .Items }}
@@ -52,6 +58,12 @@
             <td>{{ .Key }}</td>
             <td>{{ .Value }}</td>
         </tr>
+{{ end }}
+{{ if .Link }}
+    <tr>
+        <td>Link</td>
+        <td><a href="{{ .Link }}">{{ .Link }}</a></td>
+    </tr>
 {{ end }}
     </table>
 
