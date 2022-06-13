@@ -53,7 +53,7 @@ Or press "d" to download them or whatever; Lynx is very powerful.
 
 After writing podcasts.yaml and starting the server for the first time, you need to load "/" once to get
 Podfeeds to build the page cache. The cache will then be rebuilt whenever the modification
-time of podcasts.yaml changes.
+time of podcasts.yaml changes and "/" is loaded.
 
 Remember that Lynx requires you to refresh pages manually (by pressing C-r on a page, or following links with "x").
 
