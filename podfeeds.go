@@ -174,13 +174,7 @@ func main() {
 			fmt.Println("Looping through feeds")
 	
 			for _, feed := range feeds {
-				if seen[feed] {
-					http.Error(w, "Duplicate feed", 500)
-				}
-				seen[feed] = true
-	
-				// TODO. We need the headers as well.
-	
+
 				resp, err := http.Get(feed)
 				if err != nil {
 					http.Error(w, err.Error(), 500)
@@ -423,16 +417,13 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		
-		fmt.Println("The new page")
-		// Loop over header names
-		for name, values := range resp.Header {
-			// Loop over all values for the name.
-			for _, value := range values {
-				fmt.Println(name, value)
-			}
-		}
 
+		if (resp.StatusCode != http.StatusNotModified) {
+			// In this case, we need to recache.
+
+			// TODO: No I am not copy and pasting several screens worth of code from above.
+			// Extract it properly.
+		}
 
 		encodings := r.Header["Accept-Encoding"]
 		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
