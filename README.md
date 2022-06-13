@@ -10,7 +10,7 @@ open them in mpv:
     video/*; mpv %s
     application/vnd.rn-realmedia; mpv %s
 
-Gather your podcast feed URIs. One way to find them is to
+Gather your podcast feed URLs. One way to find them is to
 use the "podfeed" script I posted here:
 
 [CLI app to get podcast feed URLs
