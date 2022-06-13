@@ -106,74 +106,12 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
-		/*
-
-		Okay, how to do this...
-
-		Check for "/" in the cache.
-		If it exists, check its modification time.
-
-		If it exists in the cache and its modification time matches the
-		subscriptions list, then return what's cached.
-
-		Otherwise, clear the cache, and rebuild it by fetching and rendering
-		all the pages including this one.
-
-		*/
-
 		stat, err := os.Stat("./podcasts.yaml")
 		if (err != nil) {
 			log.Fatal(err)
 		}
 
 		feeds := make([]string, 0)
-
-
-		statement, err  := database.Prepare("SELECT * FROM Pages WHERE URL = ?")
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer statement.Close()
-
-
-		row := statement.QueryRow("/")
-		var index Page
-		row.Scan(&index.URL, &index.ETag, &index.LastModified, &index.HTML)
-
-
-		if index.LastModified == stat.ModTime().Format(http.TimeFormat) {
-			encodings := r.Header["Accept-Encoding"]
-			compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
-	
-	
-			if compress {
-				fmt.Println("Compressed")
-				w.Header().Add("Content-Encoding", "gzip")
-				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-				w.Write(index.HTML)
-			} else {
-				byteReader := bytes.NewReader(index.HTML)
-				reader, err := gzip.NewReader(byteReader)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-				body, err := ioutil.ReadAll(reader)
-				reader.Close()
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-				w.Write(body)
-			}
-
-			return
-		} else {
-			_, err := database.Query("DELETE FROM Pages")
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
 
 		buf, err := ioutil.ReadFile("./podcasts.yaml")
 
@@ -188,216 +126,257 @@ func main() {
 			return
 		}
 
-		subscriptions := Subscriptions{}
-
-		// Can we use this more than once?
-		fp := gofeed.NewParser()
-
 		// Seriously, just don't let the user enter duplicate feeds.
 		seen := make(map[string]bool)
-
-		fmt.Println("Looping through feeds")
-
 		for _, feed := range feeds {
 			if seen[feed] {
-				http.Error(w, "Duplicate feed", 500)
+				http.Error(w, "Duplicate feed", http.StatusInternalServerError)
+				return
 			}
 			seen[feed] = true
+		}
 
-			// TODO. We need the headers as well.
+		statement, err  := database.Prepare("SELECT * FROM Pages WHERE URL = ?")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer statement.Close()
 
-			resp, err := http.Get(feed)
+
+		row := statement.QueryRow("/")
+		var index Page
+		err = row.Scan(&index.URL, &index.ETag, &index.LastModified, &index.HTML)
+
+		recache := false
+		if (err == sql.ErrNoRows) {
+			recache = true
+		} else if index.LastModified != stat.ModTime().Format(http.TimeFormat) {
+			recache = true
+		}
+
+		if recache {
+
+
+			_, err := database.Query("DELETE FROM Pages")
 			if err != nil {
-				http.Error(w, err.Error(), 500)
-			}
-			parsed, err := fp.Parse(resp.Body)
-			if err != nil {
-				http.Error(w, err.Error(), 500)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 
-			subscription := Subscription{parsed.Title, "/podcast?url=" + url.QueryEscape(feed)}
-			subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
+			subscriptions := Subscriptions{}
 
-			// TODO: Rendering and caching the feed page goes here.
-			var podcast Podcast
-			podcast.Language = parsed.Language
-			podcast.FeedLink = parsed.FeedLink
-			podcast.ImageURL = parsed.Image.URL
-			podcast.ImageTitle = parsed.Image.Title
-			podcast.Title = parsed.Title
-			podcast.Description = parsed.Description
-
-			if parsed.Updated != "" {
-				podcast.Metadata = append(podcast.Metadata, Metadata{"Updated", parsed.Updated})
-			}
-
-			if parsed.Published != "" {
-				podcast.Metadata = append(podcast.Metadata, Metadata{"Published", parsed.Published})
-			}
-
-			if len(parsed.Authors) > 0 {
-				var authorsBuilder strings.Builder
-				for _, author := range parsed.Authors {
-					authorsBuilder.WriteString(author.Name)
-					authorsBuilder.WriteString(" (")
-					authorsBuilder.WriteString(author.Email)
-					authorsBuilder.WriteString(") ")
+			// Can we use this more than once?
+			fp := gofeed.NewParser()
+	
+			// Seriously, just don't let the user enter duplicate feeds.
+			seen := make(map[string]bool)
+	
+			fmt.Println("Looping through feeds")
+	
+			for _, feed := range feeds {
+				if seen[feed] {
+					http.Error(w, "Duplicate feed", 500)
 				}
-				podcast.Metadata = append(podcast.Metadata, Metadata{"Authors", authorsBuilder.String()})
-			}
-
-			if len(parsed.Categories) > 0 {
-				podcast.Metadata = append(podcast.Metadata, Metadata{"Categories", strings.Join(parsed.Categories, "/")})
-			}
-
-			if parsed.Copyright != "" {
-				podcast.Metadata = append(podcast.Metadata, Metadata{"Copyright", parsed.Copyright})
-			}
-
-			if parsed.Generator != "" {
-				podcast.Metadata = append(podcast.Metadata, Metadata{"Generator", parsed.Generator})
-			}
-
-			for _, parsedItem := range parsed.Items {
-				var item Item
-				item.Description = parsedItem.Description
-				item.Title = parsedItem.Title
-
-				if parsedItem.Image != nil {
-					item.ImageTitle = parsedItem.Image.Title
-					item.ImageURL = parsedItem.Image.URL
-				} else {
-					item.ImageTitle = ""
-					item.ImageURL = ""
+				seen[feed] = true
+	
+				// TODO. We need the headers as well.
+	
+				resp, err := http.Get(feed)
+				if err != nil {
+					http.Error(w, err.Error(), 500)
 				}
-
-
-				for _, enclosure := range parsedItem.Enclosures {
-					item.Enclosures = append(item.Enclosures, Enclosure{enclosure.URL, enclosure.Type})
+				parsed, err := fp.Parse(resp.Body)
+				if err != nil {
+					http.Error(w, err.Error(), 500)
 				}
-
-				if parsedItem.Updated != "" {
-					item.Metadata = append(item.Metadata, Metadata{"Updated", parsedItem.Updated})
+	
+				subscription := Subscription{parsed.Title, "/podcast?url=" + url.QueryEscape(feed)}
+				subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
+	
+				// TODO: Rendering and caching the feed page goes here.
+				var podcast Podcast
+				podcast.Language = parsed.Language
+				podcast.FeedLink = parsed.FeedLink
+				podcast.ImageURL = parsed.Image.URL
+				podcast.ImageTitle = parsed.Image.Title
+				podcast.Title = parsed.Title
+				podcast.Description = parsed.Description
+	
+				if parsed.Updated != "" {
+					podcast.Metadata = append(podcast.Metadata, Metadata{"Updated", parsed.Updated})
 				}
-
-				if parsedItem.Published != "" {
-					item.Metadata = append(item.Metadata, Metadata{"Published", parsedItem.Published})
+	
+				if parsed.Published != "" {
+					podcast.Metadata = append(podcast.Metadata, Metadata{"Published", parsed.Published})
 				}
-
-				if parsedItem.Content != "" {
-					item.Metadata = append(item.Metadata, Metadata{"Content", parsedItem.Content})
-				}
-
-				if parsedItem.Link != "" {
-					item.Metadata = append(item.Metadata, Metadata{"Link", parsedItem.Link})
-				}
-
-				if len(parsedItem.Authors) > 0 {
+	
+				if len(parsed.Authors) > 0 {
 					var authorsBuilder strings.Builder
-					for _, author := range parsedItem.Authors {
+					for _, author := range parsed.Authors {
 						authorsBuilder.WriteString(author.Name)
 						authorsBuilder.WriteString(" (")
 						authorsBuilder.WriteString(author.Email)
 						authorsBuilder.WriteString(") ")
 					}
-					item .Metadata = append(item.Metadata, Metadata{"Authors", authorsBuilder.String()})
+					podcast.Metadata = append(podcast.Metadata, Metadata{"Authors", authorsBuilder.String()})
 				}
-
-				if len(parsedItem.Categories) > 0 {
-					item.Metadata = append(item.Metadata, Metadata{"Categories", strings.Join(parsedItem.Categories, "/")})
+	
+				if len(parsed.Categories) > 0 {
+					podcast.Metadata = append(podcast.Metadata, Metadata{"Categories", strings.Join(parsed.Categories, "/")})
 				}
-
-				podcast.Items = append(podcast.Items, item)
-			}
-
-			fmt.Println("Parsing podcast template")
-			pageTemplate, err := template.ParseFiles("./templates/podcast.html")
-			if err != nil {
-				http.Error(w, err.Error(), 500)
-			}
+	
+				if parsed.Copyright != "" {
+					podcast.Metadata = append(podcast.Metadata, Metadata{"Copyright", parsed.Copyright})
+				}
+	
+				if parsed.Generator != "" {
+					podcast.Metadata = append(podcast.Metadata, Metadata{"Generator", parsed.Generator})
+				}
+	
+				for _, parsedItem := range parsed.Items {
+					var item Item
+					item.Description = parsedItem.Description
+					item.Title = parsedItem.Title
+	
+					if parsedItem.Image != nil {
+						item.ImageTitle = parsedItem.Image.Title
+						item.ImageURL = parsedItem.Image.URL
+					} else {
+						item.ImageTitle = ""
+						item.ImageURL = ""
+					}
+	
+	
+					for _, enclosure := range parsedItem.Enclosures {
+						item.Enclosures = append(item.Enclosures, Enclosure{enclosure.URL, enclosure.Type})
+					}
+	
+					if parsedItem.Updated != "" {
+						item.Metadata = append(item.Metadata, Metadata{"Updated", parsedItem.Updated})
+					}
+	
+					if parsedItem.Published != "" {
+						item.Metadata = append(item.Metadata, Metadata{"Published", parsedItem.Published})
+					}
+	
+					if parsedItem.Content != "" {
+						item.Metadata = append(item.Metadata, Metadata{"Content", parsedItem.Content})
+					}
+	
+					if parsedItem.Link != "" {
+						item.Metadata = append(item.Metadata, Metadata{"Link", parsedItem.Link})
+					}
+	
+					if len(parsedItem.Authors) > 0 {
+						var authorsBuilder strings.Builder
+						for _, author := range parsedItem.Authors {
+							authorsBuilder.WriteString(author.Name)
+							authorsBuilder.WriteString(" (")
+							authorsBuilder.WriteString(author.Email)
+							authorsBuilder.WriteString(") ")
+						}
+						item .Metadata = append(item.Metadata, Metadata{"Authors", authorsBuilder.String()})
+					}
+	
+					if len(parsedItem.Categories) > 0 {
+						item.Metadata = append(item.Metadata, Metadata{"Categories", strings.Join(parsedItem.Categories, "/")})
+					}
+	
+					podcast.Items = append(podcast.Items, item)
+				}
+	
+				fmt.Println("Parsing podcast template")
+				pageTemplate, err := template.ParseFiles("./templates/podcast.html")
+				if err != nil {
+					http.Error(w, err.Error(), 500)
+				}
+				
+				var pageBuilder bytes.Buffer
+				err = pageTemplate.Execute(&pageBuilder, podcast)
+				if err != nil {
+					http.Error(w, err.Error(), 500)
+				}
+	
+				page := new(bytes.Buffer)
+				writer := gzip.NewWriter(page)
+				writer.Write(pageBuilder.Bytes())
+				writer.Close()
+	
+				statement, err = database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
+				if (err != nil) {
+					http.Error(w, err.Error(), 500)
+				}
+	
+				etags := resp.Header[http.CanonicalHeaderKey("ETag")]
+				var etag string
+				if len(etags) > 0 {
+					etag = etags[0]
+				} else {
+					etag = ""
+				}
+	
+				lastModifieds := resp.Header[http.CanonicalHeaderKey("Last-Modified")]
+				var lastModified string
+				if len(lastModifieds) > 0 {
+					lastModified = lastModifieds[0]
+				} else {
+					lastModified = ""
+				}
+		
+				_, err = statement.Exec(feed, etag, lastModified, page.Bytes())
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+		
+				// TODO: use concurrency to render all the pages simultaneously
 			
-			var pageBuilder bytes.Buffer
-			err = pageTemplate.Execute(&pageBuilder, podcast)
-			if err != nil {
-				http.Error(w, err.Error(), 500)
-			}
-
-			page := new(bytes.Buffer)
-			writer := gzip.NewWriter(page)
-			writer.Write(pageBuilder.Bytes())
-			writer.Close()
-
-			statement, err = database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
-			if (err != nil) {
-				http.Error(w, err.Error(), 500)
-			}
-
-			etags := resp.Header[http.CanonicalHeaderKey("ETag")]
-			var etag string
-			if len(etags) > 0 {
-				etag = etags[0]
-			} else {
-				etag = ""
-			}
-
-			lastModifieds := resp.Header[http.CanonicalHeaderKey("Last-Modified")]
-			var lastModified string
-			if len(lastModifieds) > 0 {
-				lastModified = lastModifieds[0]
-			} else {
-				lastModified = ""
 			}
 	
-			_, err = statement.Exec(feed, etag, lastModified, page.Bytes())
-			if err != nil {
+	
+			t, _ := template.ParseFiles("./templates/index.html")
+			buff := new(bytes.Buffer)
+			writer := gzip.NewWriter(buff)
+			t.Execute(writer, subscriptions)
+			writer.Close()
+	
+			statement, err = database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
+			if (err != nil) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-	
-			// TODO: use concurrency to render all the pages simultaneously
-		
+			
+			index.URL = "/"
+			index.ETag = ""
+			index.LastModified = stat.ModTime().Format(http.TimeFormat)
+			index.HTML = buff.Bytes()
+
+			statement.Exec(index.URL, index.ETag, index.LastModified, index.HTML)
 		}
 
-
-		t, _ := template.ParseFiles("./templates/index.html")
-		buff := new(bytes.Buffer)
-		writer := gzip.NewWriter(buff)
-		t.Execute(writer, subscriptions)
-		writer.Close()
-
-		statement, err = database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
-		if (err != nil) {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		statement.Exec("/", "", stat.ModTime().Format(http.TimeFormat), buff.Bytes())
 
 		encodings := r.Header["Accept-Encoding"]
 		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
-
-	
-
 
 
 		if compress {
 			fmt.Println("Compressed")
 			w.Header().Add("Content-Encoding", "gzip")
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Write(buff.Bytes())
+			w.Write(index.HTML)
 		} else {
-			fmt.Println("NOt compressed")
-			reader, err := gzip.NewReader(buff)
+			byteReader := bytes.NewReader(index.HTML)
+			reader, err := gzip.NewReader(byteReader)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-
 			body, err := ioutil.ReadAll(reader)
+			reader.Close()
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Write(body)
 		}
 
