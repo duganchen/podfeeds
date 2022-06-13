@@ -140,7 +140,6 @@ func main() {
 		var index Page
 		row.Scan(&index.URL, &index.ETag, &index.LastModified, &index.HTML)
 
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 		if index.LastModified == stat.ModTime().Format(http.TimeFormat) {
 			encodings := r.Header["Accept-Encoding"]
@@ -155,12 +154,14 @@ func main() {
 				byteReader := bytes.NewReader(index.HTML)
 				reader, err := gzip.NewReader(byteReader)
 				if err != nil {
-					log.Fatal(err)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
 				}
 				body, err := ioutil.ReadAll(reader)
 				reader.Close()
 				if err != nil {
-					log.Fatal(err)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
 				}
 				w.Write(body)
 			}
@@ -176,13 +177,13 @@ func main() {
 		buf, err := ioutil.ReadFile("./podcasts.yaml")
 
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		err = yaml.Unmarshal(buf, &feeds)
 
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -206,11 +207,11 @@ func main() {
 
 			resp, err := http.Get(feed)
 			if err != nil {
-				log.Fatal(err)
+				http.Error(w, err.Error(), 500)
 			}
 			parsed, err := fp.Parse(resp.Body)
 			if err != nil {
-				log.Fatal(err)
+				http.Error(w, err.Error(), 500)
 			}
 
 			subscription := Subscription{parsed.Title, "/podcast?url=" + url.QueryEscape(feed)}
@@ -311,13 +312,13 @@ func main() {
 			fmt.Println("Parsing podcast template")
 			pageTemplate, err := template.ParseFiles("./templates/podcast.html")
 			if err != nil {
-				log.Fatal(err)
+				http.Error(w, err.Error(), 500)
 			}
 			
 			var pageBuilder bytes.Buffer
 			err = pageTemplate.Execute(&pageBuilder, podcast)
 			if err != nil {
-				log.Fatal(err)
+				http.Error(w, err.Error(), 500)
 			}
 
 			page := new(bytes.Buffer)
@@ -327,7 +328,7 @@ func main() {
 
 			statement, err = database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
 			if (err != nil) {
-				log.Fatal(err)
+				http.Error(w, err.Error(), 500)
 			}
 
 			etags := resp.Header[http.CanonicalHeaderKey("ETag")]
@@ -348,7 +349,7 @@ func main() {
 	
 			_, err = statement.Exec(feed, etag, lastModified, page.Bytes())
 			if err != nil {
-				log.Fatal(err)
+				http.Error(w, err.Error(), 500)
 			}
 	
 			// TODO: use concurrency to render all the pages simultaneously
@@ -364,12 +365,16 @@ func main() {
 
 		statement, err = database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
 		if (err != nil) {
-			log.Fatal(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		statement.Exec("/", "", stat.ModTime().Format(http.TimeFormat), buff.Bytes())
 
 		encodings := r.Header["Accept-Encoding"]
 		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
+
+	
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 
 		if compress {
@@ -380,12 +385,12 @@ func main() {
 			fmt.Println("NOt compressed")
 			reader, err := gzip.NewReader(buff)
 			if err != nil {
-				log.Fatal(err)
+				http.Error(w, err.Error(), 500)
 			}
 
 			body, err := ioutil.ReadAll(reader)
 			if err != nil {
-				log.Fatal(err)
+				http.Error(w, err.Error(), 500)
 			} 
 			w.Write(body)
 		}
@@ -396,24 +401,31 @@ func main() {
 		url := r.URL.Query().Get("url")
 
 		if url == "" {
-			http.Error(w, "Missing parameter 'url'", 400)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		
+
 		statement, err := database.Prepare("SELECT * FROM Pages WHERE URL = ?")
 		if err != nil {
-			log.Fatal(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		row := statement.QueryRow(url)
 		statement.Close()
 		var page Page
-		row.Scan(&page.URL, &page.ETag, &page.LastModified, &page.HTML)
+		err = row.Scan(&page.URL, &page.ETag, &page.LastModified, &page.HTML)
+		if err == sql.ErrNoRows {
+			http.Error(w, "Podcast URL not found", http.StatusNotFound)
+			return
+		}
 
 		encodings := r.Header["Accept-Encoding"]
 		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
 
 
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		
 		if compress {
 			fmt.Println("Compressed")
 			w.Header().Add("Content-Encoding", "gzip")
