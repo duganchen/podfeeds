@@ -88,6 +88,156 @@ type Page struct {
 	HTML []byte
 }
 
+func cacheFeed(feed string, database *sql.DB) (string, error) {
+	resp, err := http.Get(feed)
+	if err != nil {
+		return "", err
+	}
+
+	fp := gofeed.NewParser()
+
+	parsed, err := fp.Parse(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var podcast Podcast
+	podcast.Language = parsed.Language
+	podcast.FeedLink = parsed.FeedLink
+	podcast.ImageURL = parsed.Image.URL
+	podcast.ImageTitle = parsed.Image.Title
+	podcast.Title = parsed.Title
+	podcast.Description = parsed.Description
+
+	if parsed.Updated != "" {
+		podcast.Metadata = append(podcast.Metadata, Metadata{"Updated", parsed.Updated})
+	}
+
+	if parsed.Published != "" {
+		podcast.Metadata = append(podcast.Metadata, Metadata{"Published", parsed.Published})
+	}
+
+	if len(parsed.Authors) > 0 {
+		var authorsBuilder strings.Builder
+		for _, author := range parsed.Authors {
+			authorsBuilder.WriteString(author.Name)
+			authorsBuilder.WriteString(" (")
+			authorsBuilder.WriteString(author.Email)
+			authorsBuilder.WriteString(") ")
+		}
+		podcast.Metadata = append(podcast.Metadata, Metadata{"Authors", authorsBuilder.String()})
+	}
+
+	if len(parsed.Categories) > 0 {
+		podcast.Metadata = append(podcast.Metadata, Metadata{"Categories", strings.Join(parsed.Categories, "/")})
+	}
+
+	if parsed.Copyright != "" {
+		podcast.Metadata = append(podcast.Metadata, Metadata{"Copyright", parsed.Copyright})
+	}
+
+	if parsed.Generator != "" {
+		podcast.Metadata = append(podcast.Metadata, Metadata{"Generator", parsed.Generator})
+	}
+
+	for _, parsedItem := range parsed.Items {
+		var item Item
+		item.Description = parsedItem.Description
+		item.Title = parsedItem.Title
+
+		if parsedItem.Image != nil {
+			item.ImageTitle = parsedItem.Image.Title
+			item.ImageURL = parsedItem.Image.URL
+		} else {
+			item.ImageTitle = ""
+			item.ImageURL = ""
+		}
+
+
+		for _, enclosure := range parsedItem.Enclosures {
+			item.Enclosures = append(item.Enclosures, Enclosure{enclosure.URL, enclosure.Type})
+		}
+
+		if parsedItem.Updated != "" {
+			item.Metadata = append(item.Metadata, Metadata{"Updated", parsedItem.Updated})
+		}
+
+		if parsedItem.Published != "" {
+			item.Metadata = append(item.Metadata, Metadata{"Published", parsedItem.Published})
+		}
+
+		if parsedItem.Content != "" {
+			item.Metadata = append(item.Metadata, Metadata{"Content", parsedItem.Content})
+		}
+
+		if parsedItem.Link != "" {
+			item.Metadata = append(item.Metadata, Metadata{"Link", parsedItem.Link})
+		}
+
+		if len(parsedItem.Authors) > 0 {
+			var authorsBuilder strings.Builder
+			for _, author := range parsedItem.Authors {
+				authorsBuilder.WriteString(author.Name)
+				authorsBuilder.WriteString(" (")
+				authorsBuilder.WriteString(author.Email)
+				authorsBuilder.WriteString(") ")
+			}
+			item .Metadata = append(item.Metadata, Metadata{"Authors", authorsBuilder.String()})
+		}
+
+		if len(parsedItem.Categories) > 0 {
+			item.Metadata = append(item.Metadata, Metadata{"Categories", strings.Join(parsedItem.Categories, "/")})
+		}
+
+		podcast.Items = append(podcast.Items, item)
+	}
+
+	pageTemplate, err := template.ParseFiles("./templates/podcast.html")
+	if err != nil {
+		return "", err
+	}
+	
+	var pageBuilder bytes.Buffer
+	err = pageTemplate.Execute(&pageBuilder, podcast)
+	if err != nil {
+		return "", err
+	}
+
+	page := new(bytes.Buffer)
+	writer := gzip.NewWriter(page)
+	writer.Write(pageBuilder.Bytes())
+	defer writer.Close()
+
+	statement, err := database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
+	if (err != nil) {
+		return "", err
+	}
+	defer statement.Close()
+
+	etags := resp.Header[http.CanonicalHeaderKey("ETag")]
+	var etag string
+	if len(etags) > 0 {
+		etag = etags[0]
+	} else {
+		etag = ""
+	}
+
+	lastModifieds := resp.Header[http.CanonicalHeaderKey("Last-Modified")]
+	var lastModified string
+	if len(lastModifieds) > 0 {
+		lastModified = lastModifieds[0]
+	} else {
+		lastModified = ""
+	}
+	
+	_, err = statement.Exec(feed, etag, lastModified, page.Bytes())
+	if err != nil {
+		return "", err
+	}
+
+	return parsed.Title, nil
+}
+
 func main() {
 	
 	database, err := sql.Open("sqlite3", "./cache.sqlite3")
@@ -141,7 +291,8 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		statement.Close()
+		// Not defering this results in a ver, very noticeable drop in performance.
+		defer statement.Close()
 
 
 		row := statement.QueryRow("/")
@@ -156,169 +307,22 @@ func main() {
 		}
 
 		if recache {
-
 			_, err := database.Exec("DELETE FROM Pages")
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
 
 			subscriptions := Subscriptions{}
 
-			// Can we use this more than once?
-			fp := gofeed.NewParser()
-	
+
 			for _, feed := range feeds {
-
-				resp, err := http.Get(feed)
+				title, err := cacheFeed(feed, database)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				}
-				parsed, err := fp.Parse(resp.Body)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-	
-				// TODO: Rendering and caching the feed page goes here.
-				var podcast Podcast
-				podcast.Language = parsed.Language
-				podcast.FeedLink = parsed.FeedLink
-				podcast.ImageURL = parsed.Image.URL
-				podcast.ImageTitle = parsed.Image.Title
-				podcast.Title = parsed.Title
-				podcast.Description = parsed.Description
-	
-				if parsed.Updated != "" {
-					podcast.Metadata = append(podcast.Metadata, Metadata{"Updated", parsed.Updated})
-				}
-	
-				if parsed.Published != "" {
-					podcast.Metadata = append(podcast.Metadata, Metadata{"Published", parsed.Published})
-				}
-	
-				if len(parsed.Authors) > 0 {
-					var authorsBuilder strings.Builder
-					for _, author := range parsed.Authors {
-						authorsBuilder.WriteString(author.Name)
-						authorsBuilder.WriteString(" (")
-						authorsBuilder.WriteString(author.Email)
-						authorsBuilder.WriteString(") ")
-					}
-					podcast.Metadata = append(podcast.Metadata, Metadata{"Authors", authorsBuilder.String()})
-				}
-	
-				if len(parsed.Categories) > 0 {
-					podcast.Metadata = append(podcast.Metadata, Metadata{"Categories", strings.Join(parsed.Categories, "/")})
-				}
-	
-				if parsed.Copyright != "" {
-					podcast.Metadata = append(podcast.Metadata, Metadata{"Copyright", parsed.Copyright})
-				}
-	
-				if parsed.Generator != "" {
-					podcast.Metadata = append(podcast.Metadata, Metadata{"Generator", parsed.Generator})
-				}
-	
-				for _, parsedItem := range parsed.Items {
-					var item Item
-					item.Description = parsedItem.Description
-					item.Title = parsedItem.Title
-	
-					if parsedItem.Image != nil {
-						item.ImageTitle = parsedItem.Image.Title
-						item.ImageURL = parsedItem.Image.URL
-					} else {
-						item.ImageTitle = ""
-						item.ImageURL = ""
-					}
-	
-	
-					for _, enclosure := range parsedItem.Enclosures {
-						item.Enclosures = append(item.Enclosures, Enclosure{enclosure.URL, enclosure.Type})
-					}
-	
-					if parsedItem.Updated != "" {
-						item.Metadata = append(item.Metadata, Metadata{"Updated", parsedItem.Updated})
-					}
-	
-					if parsedItem.Published != "" {
-						item.Metadata = append(item.Metadata, Metadata{"Published", parsedItem.Published})
-					}
-	
-					if parsedItem.Content != "" {
-						item.Metadata = append(item.Metadata, Metadata{"Content", parsedItem.Content})
-					}
-	
-					if parsedItem.Link != "" {
-						item.Metadata = append(item.Metadata, Metadata{"Link", parsedItem.Link})
-					}
-	
-					if len(parsedItem.Authors) > 0 {
-						var authorsBuilder strings.Builder
-						for _, author := range parsedItem.Authors {
-							authorsBuilder.WriteString(author.Name)
-							authorsBuilder.WriteString(" (")
-							authorsBuilder.WriteString(author.Email)
-							authorsBuilder.WriteString(") ")
-						}
-						item .Metadata = append(item.Metadata, Metadata{"Authors", authorsBuilder.String()})
-					}
-	
-					if len(parsedItem.Categories) > 0 {
-						item.Metadata = append(item.Metadata, Metadata{"Categories", strings.Join(parsedItem.Categories, "/")})
-					}
-	
-					podcast.Items = append(podcast.Items, item)
-				}
-	
-				pageTemplate, err := template.ParseFiles("./templates/podcast.html")
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-				
-				var pageBuilder bytes.Buffer
-				err = pageTemplate.Execute(&pageBuilder, podcast)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-	
-				page := new(bytes.Buffer)
-				writer := gzip.NewWriter(page)
-				writer.Write(pageBuilder.Bytes())
-				writer.Close()
-	
-				statement, err = database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
-				if (err != nil) {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-	
-				etags := resp.Header[http.CanonicalHeaderKey("ETag")]
-				var etag string
-				if len(etags) > 0 {
-					etag = etags[0]
-				} else {
-					etag = ""
-				}
-	
-				lastModifieds := resp.Header[http.CanonicalHeaderKey("Last-Modified")]
-				var lastModified string
-				if len(lastModifieds) > 0 {
-					lastModified = lastModifieds[0]
-				} else {
-					lastModified = ""
-				}
-				
-				_, err = statement.Exec(feed, etag, lastModified, page.Bytes())
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-
-				subscription := Subscription{parsed.Title, "/podcast?url=" + url.QueryEscape(feed)}
+				subscription := Subscription{title, "/podcast?url=" + url.QueryEscape(feed)}
 				subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
 		
 				// TODO: use concurrency to render all the pages simultaneously
