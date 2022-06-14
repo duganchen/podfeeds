@@ -404,15 +404,17 @@ func main() {
 			return
 		}
 
-		// TODO:
-		// This has an ETag:
-		// http://feeds.feedburner.com/TEDTalks_video
-		// So support it.
 		var client http.Client
 		req, err := http.NewRequest("GET", page.URL, nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		// Chrome sends both if it can.
+
+		if page.ETag != "" {
+			req.Header.Add("If-None-Match", page.ETag)
 		}
 
 		if page.LastModified != "" {
