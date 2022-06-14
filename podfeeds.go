@@ -4,27 +4,24 @@ import (
 	"bytes"
 	"compress/gzip"
 	"database/sql"
+	"fmt"
+	"html/template"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"net/url"
+	"os"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
-
-	"fmt"
-	"io/ioutil"
-	"log"
-	"os"
-
-	"html/template"
-	"net/http"
-	"net/url"
 
 	"github.com/mmcdole/gofeed"
 	"gopkg.in/yaml.v3"
 )
 
-
 type Subscription struct {
 	Title string
-	Url string
+	Url   string
 }
 
 type Subscriptions struct {
@@ -32,45 +29,55 @@ type Subscriptions struct {
 }
 
 type Metadata struct {
-	Key string
+	Key   string
 	Value string
 }
 
 type Enclosure struct {
-	URL string
+	URL  string
 	Type string
 }
 
 type Image struct {
 	Title string
-	URL string
+	URL   string
 }
 
 type Item struct {
-	Enclosures []Enclosure
-	Metadata []Metadata
-	Title string
+	Enclosures  []Enclosure
+	Metadata    []Metadata
+	Title       string
 	Description string
-	Images []Image
-	Link string
+	Images      []Image
+	Link        string
 }
 
 type Podcast struct {
-	Title string
+	Title       string
 	Description string
-	Language string
-	Images []Image
-	Items []Item
-	Metadata []Metadata
-	Link string
+	Language    string
+	Images      []Image
+	Items       []Item
+	Metadata    []Metadata
+	Link        string
 	// We don't care about FeedLink. It's a link to the XML file.
 }
 
 type Page struct {
-	URL string
-	ETag string
+	URL          string
+	ETag         string
 	LastModified string
-	HTML []byte
+	HTML         []byte
+}
+
+var (
+	indexTemplate   *template.Template
+	podcastTemplate *template.Template
+)
+
+func init() {
+	indexTemplate = template.Must(template.ParseFiles("./templates/index.html"))
+	podcastTemplate = template.Must(template.ParseFiles("./templates/podcast.html"))
 }
 
 func CacheFeed(feed string, database *sql.DB) (string, error) {
@@ -93,7 +100,7 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 
 	podcast.Title = parsed.Title
 	podcast.Description = parsed.Description
-	
+
 	podcast.Link = parsed.Link
 
 	if parsed.Updated != "" {
@@ -161,7 +168,7 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 				authorsBuilder.WriteString(author.Email)
 				authorsBuilder.WriteString(") ")
 			}
-			item .Metadata = append(item.Metadata, Metadata{"Authors", authorsBuilder.String()})
+			item.Metadata = append(item.Metadata, Metadata{"Authors", authorsBuilder.String()})
 		}
 
 		if len(parsedItem.Categories) > 0 {
@@ -171,13 +178,8 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 		podcast.Items = append(podcast.Items, item)
 	}
 
-	pageTemplate, err := template.ParseFiles("./templates/podcast.html")
-	if err != nil {
-		return "", err
-	}
-	
 	var pageBuilder bytes.Buffer
-	err = pageTemplate.Execute(&pageBuilder, podcast)
+	err = podcastTemplate.Execute(&pageBuilder, podcast)
 	if err != nil {
 		return "", err
 	}
@@ -191,7 +193,7 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 	writer.Close()
 
 	statement, err := database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
-	if (err != nil) {
+	if err != nil {
 		return "", err
 	}
 	defer statement.Close()
@@ -211,7 +213,7 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 	} else {
 		lastModified = ""
 	}
-	
+
 	_, err = statement.Exec(feed, etag, lastModified, page.Bytes())
 	if err != nil {
 		return "", err
@@ -239,7 +241,6 @@ func WriteResponse(w http.ResponseWriter, body []byte, r *http.Request) error {
 	encodings := r.Header["Accept-Encoding"]
 	compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
 
-
 	if compress {
 		w.Header().Add("Content-Encoding", "gzip")
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -252,7 +253,6 @@ func WriteResponse(w http.ResponseWriter, body []byte, r *http.Request) error {
 		}
 		defer reader.Close()
 		body, err := ioutil.ReadAll(reader)
-
 		if err != nil {
 			return err
 		}
@@ -263,32 +263,29 @@ func WriteResponse(w http.ResponseWriter, body []byte, r *http.Request) error {
 }
 
 func main() {
-	
 	database, err := sql.Open("sqlite3", "./cache.sqlite3")
-	if (err != nil) {
+	if err != nil {
 		log.Fatal(err)
 	}
 
 	statement, err := database.Prepare("CREATE TABLE IF NOT EXISTS Pages (URL TEXT PRIMARY KEY, ETag Text, LastModified TEXT, HTML BLOB)")
-	if (err != nil) {
+	if err != nil {
 		log.Fatal(err)
 	}
 	_, err = statement.Exec()
-	if (err != nil) {
+	if err != nil {
 		log.Fatal(err)
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-
 		stat, err := os.Stat("./podcasts.yaml")
-		if (err != nil) {
+		if err != nil {
 			log.Fatal(err)
 		}
 
 		feeds := make([]string, 0)
 
 		buf, err := ioutil.ReadFile("./podcasts.yaml")
-
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -310,7 +307,7 @@ func main() {
 			seen[feed] = true
 		}
 
-		statement, err  := database.Prepare("SELECT * FROM Pages WHERE URL = ?")
+		statement, err := database.Prepare("SELECT * FROM Pages WHERE URL = ?")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -318,13 +315,12 @@ func main() {
 		// Not defering this results in a ver, very noticeable drop in performance.
 		defer statement.Close()
 
-
 		row := statement.QueryRow("/")
 		var index Page
 		err = row.Scan(&index.URL, &index.ETag, &index.LastModified, &index.HTML)
 
 		recache := false
-		if (err == sql.ErrNoRows) {
+		if err == sql.ErrNoRows {
 			recache = true
 		} else if index.LastModified != stat.ModTime().Format(http.TimeFormat) {
 			recache = true
@@ -339,7 +335,6 @@ func main() {
 
 			subscriptions := Subscriptions{}
 
-
 			for _, feed := range feeds {
 				// Look. We *could* fetch and render every page at the same time because we're using go, but
 				// that would be optimizing the path where the cache misses, and we kinda don't care about that
@@ -350,30 +345,28 @@ func main() {
 					return
 				}
 				subscription := Subscription{title, "/podcast?url=" + url.QueryEscape(feed)}
-				subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)		
+				subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
 			}
-	
-	
-			t, _ := template.ParseFiles("./templates/index.html")
+
 			buff := new(bytes.Buffer)
 			writer := gzip.NewWriter(buff)
-			t.Execute(writer, subscriptions)
+			indexTemplate.Execute(writer, subscriptions)
 			writer.Close()
-			
+
 			statement, err = database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
-			if (err != nil) {
+			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			defer statement.Close()
-			
+
 			index.URL = "/"
 			index.ETag = ""
 			index.LastModified = stat.ModTime().Format(http.TimeFormat)
 			index.HTML = buff.Bytes()
 
 			_, err = statement.Exec(index.URL, index.ETag, index.LastModified, index.HTML)
-			if (err != nil) {
+			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -426,10 +419,10 @@ func main() {
 			return
 		}
 
-		if (resp.StatusCode != http.StatusNotModified) {
+		if resp.StatusCode != http.StatusNotModified {
 
 			stmt, err := database.Prepare("DELETE FROM Pages WHERE URL = ?")
-			if (err != nil) {
+			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -441,7 +434,7 @@ func main() {
 			}
 
 			_, err = CacheFeed(page.URL, database)
-			if (err != nil) {
+			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 
@@ -470,4 +463,3 @@ func main() {
 	port = fmt.Sprintf(":%v", port)
 	log.Fatal(http.ListenAndServe(port, nil))
 }
-	
