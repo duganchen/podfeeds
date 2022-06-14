@@ -12,8 +12,10 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/mmcdole/gofeed"
 	"gopkg.in/yaml.v3"
@@ -222,6 +224,16 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 	return parsed.Title, nil
 }
 
+func CacheFeedAsync(feed string, database *sql.DB, feedTitles map[string]string, mutex *sync.Mutex) func() error {
+	return func() error {
+		title, err := CacheFeed(feed, database)
+		mutex.Lock()
+		feedTitles[feed] = title
+		mutex.Unlock()
+		return err
+	}
+}
+
 func LoadPage(url string, database *sql.DB) (Page, error) {
 	var page Page
 	statement, err := database.Prepare("SELECT * FROM Pages WHERE URL = ?")
@@ -335,17 +347,23 @@ func main() {
 
 			subscriptions := Subscriptions{}
 
+			var mutex sync.Mutex
+			feedTitles := make(map[string]string)
+			g := new(errgroup.Group)
 			for _, feed := range feeds {
-				// Look. We *could* fetch and render every page at the same time because we're using go, but
-				// that would be optimizing the path where the cache misses, and we kinda don't care about that
-				// by definition.
-				title, err := CacheFeed(feed, database)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
+				g.Go(CacheFeedAsync(feed, database, feedTitles, &mutex))
+			}
+
+			err = g.Wait()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			for feed, title := range feedTitles {
 				subscription := Subscription{title, "/podcast?url=" + url.QueryEscape(feed)}
 				subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
+
 			}
 
 			buff := new(bytes.Buffer)
