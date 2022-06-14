@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -475,9 +476,27 @@ func main() {
 	})
 
 	port, set := os.LookupEnv("PORT")
-	if !set {
-		port = "8080"
+
+	if set {
+		port = fmt.Sprintf(":%v", port)
+	} else {
+		port = ":8080"
 	}
-	port = fmt.Sprintf(":%v", port)
-	log.Fatal(http.ListenAndServe(port, nil))
+
+	/* The Port 0 implementation is from here:
+	https://youtu.be/bYSo78dwgH8
+	*/
+	if port == ":0" {
+		l, err := net.Listen("tcp", ":0")
+		if err != nil {
+			panic(err)
+		}
+		port := l.Addr().(*net.TCPAddr).Port
+		fmt.Printf("Using port: %d", port)
+		if err := http.Serve(l, nil); err != nil {
+			panic(err)
+		}
+	} else {
+		log.Fatal(http.ListenAndServe(port, nil))
+	}
 }
