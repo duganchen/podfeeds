@@ -3,12 +3,22 @@
 This is an HTTP server-based podcast aggregator. Just as other aggregators use Chrome to present a GUI, this one uses Lynx
 to present a TUI.
 
+## Setting Up Lynx
+
 Set Lynx up to open media files in your favorite media player. For example, I have the following ~/.mailcap to get Lynx to
 open them in mpv:
 
     audio/*; mpv %s
     video/*; mpv %s
     application/vnd.rn-realmedia; mpv %s
+
+Setting Lynx to always accept cookies will also save a few manual steps. Set the following (make sure they're not commented out) in lynx.cfg:
+
+    FORCE_SSL_COOKIES_SECURE:TRUE
+    SET_COOKIES:TRUE
+    ACCEPT_ALL_COOKIES:TRUE
+
+## Gathering Feed URLs
 
 Gather your podcast feed URLs. One way to find them is to
 use the "podfeed" script I posted here:
@@ -24,6 +34,7 @@ hyphen and a space. For example:
     - https://www.cbc.ca/podcasting/includes/current.xml
     - https://www.cbc.ca/podcasting/includes/asithappens.xml
 
+## Running Podfeeds
 
 Start the server:
 
