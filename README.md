@@ -18,6 +18,13 @@ Setting Lynx to always accept cookies will also save a few manual steps. Set the
     SET_COOKIES:TRUE
     ACCEPT_ALL_COOKIES:TRUE
 
+I like to set Lynx to use BASH-like bindings (in the options menu you get with "o"). It makes it
+easier to delete the GET paramemters before downloading (press Ctrl-A to go to the beginning of the
+line, cursor to the question mark, Ctrl+K to delete to the end of the line).
+
+Remember that Lynx caches everything. If you want to check for updates, you need to refresh manually
+(Ctrl+R, or by following links with "x").
+
 ## Gathering Feed URLs
 
 Gather your podcast feed URLs. One way to find them is to

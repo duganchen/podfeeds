@@ -125,9 +125,8 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 		podcast.Metadata = append(podcast.Metadata, Metadata{"Authors", authorsBuilder.String()})
 	}
 
-	if len(parsed.Categories) > 0 {
-		podcast.Metadata = append(podcast.Metadata, Metadata{"Categories", strings.Join(parsed.Categories, "/")})
-	}
+	// We don't present categories. They're for search engines to look at, not for
+	// end users to look at.
 
 	if parsed.Copyright != "" {
 		podcast.Metadata = append(podcast.Metadata, Metadata{"Copyright", parsed.Copyright})
@@ -166,16 +165,25 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 		if len(parsedItem.Authors) > 0 {
 			var authorsBuilder strings.Builder
 			for _, author := range parsedItem.Authors {
-				authorsBuilder.WriteString(author.Name)
-				authorsBuilder.WriteString(" (")
-				authorsBuilder.WriteString(author.Email)
-				authorsBuilder.WriteString(") ")
+				if author.Name != "" {
+					authorsBuilder.WriteString(author.Name)
+				}
+
+				if author.Name != "" && author.Email != "" {
+					authorsBuilder.WriteString(" (")
+				}
+
+				if author.Email != "" {
+					authorsBuilder.WriteString(author.Email)
+				}
+
+				if author.Name != "" && author.Email != "" {
+					authorsBuilder.WriteString(")")
+				}
+
+				authorsBuilder.WriteString(" ")
 			}
 			item.Metadata = append(item.Metadata, Metadata{"Authors", authorsBuilder.String()})
-		}
-
-		if len(parsedItem.Categories) > 0 {
-			item.Metadata = append(item.Metadata, Metadata{"Categories", strings.Join(parsedItem.Categories, "/")})
 		}
 
 		podcast.Items = append(podcast.Items, item)
