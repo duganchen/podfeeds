@@ -49,13 +49,3 @@ Follow "Enclosure" links to play them.
 ![Playing](images/playing.png)
 
 Or press "d" to download them or whatever; Lynx is very powerful.
-
-## Notes on caching
-
-After writing podcasts.yaml and starting the server for the first time, you need to load "/" once to get
-Podfeeds to build the page cache. The cache will then be rebuilt whenever the modification
-time of podcasts.yaml has changed and "/" is loaded.
-
-Remember that Lynx requires you to refresh pages manually (by pressing C-r on a page, or following links with "x").
-
-Refreshing a podcast's page will return Podfeeds' cached version if, and only if, the version on the server has not changed since it was cached.
