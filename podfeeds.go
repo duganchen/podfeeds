@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"database/sql"
 	"fmt"
-	"html/template"
 	"io/ioutil"
 	"log"
 	"net"
@@ -14,6 +13,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"text/template"
 
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/sync/errgroup"
@@ -158,9 +158,8 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 			item.Metadata = append(item.Metadata, Metadata{"Published", parsedItem.Published})
 		}
 
-		if parsedItem.Content != "" {
-			item.Metadata = append(item.Metadata, Metadata{"Content", parsedItem.Content})
-		}
+		// Skipping "Content". In the feed where I saw it, it has the same content as the
+		// description.
 
 		if len(parsedItem.Authors) > 0 {
 			var authorsBuilder strings.Builder
