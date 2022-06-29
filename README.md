@@ -40,6 +40,7 @@ hyphen and a space. For example:
     - https://www.cbc.ca/podcasting/includes/frontburner.xml
     - https://www.cbc.ca/podcasting/includes/current.xml
     - https://www.cbc.ca/podcasting/includes/asithappens.xml
+    - https://www.cbc.ca/podcasting/includes/cbcpowerandpolitics.xml
 
 ## Running Podfeeds
 
@@ -54,16 +55,31 @@ Load the server's index page in Lynx:
 
     lynx http://localhost:8080
 
-That will get your subscriptions:
+## Using Podfeeds
+
+Podfeeds is structured as an old-fashioned, Lynx-friendly website. There's a landing page at "/" with a link for each subscription.
+Each of those links goes to a page. That page is an HTML rendering of the podcast's XML file, with a table of contents
+at the top. Each entry at the table of contents is an episode.
+
+You start on the list of podcasts you're subscribed to.
 
 ![Subscriptions](images/subscriptions.png)
 
-Following each link gets you the page for that podcast:
+Following each link gets you the page for that podcast. The page starts with anchor links to specific episodes.
 
-![As It Happens](images/as_it_happens.png)
+![As It Happens](images/toc.png)
+
+Use the table of contents to jump to episodes. Press Ctrl+A to jump back to the beginning of the page, where the table of contents is:
+
+![As It Happens](images/episode.png)
 
 Follow "Enclosure" links to play them.
 
 ![Playing](images/playing.png)
 
 Or press "d" to download them or whatever; Lynx is very powerful.
+
+## Notes
+
+For performance, Podfeeds maintains an internal cache of rendered pages. If you want to rebuild it (perhaps after an update), simply update its modification
+time (use "touch").

@@ -53,6 +53,12 @@ type Item struct {
 	Description string
 	Images      []Image
 	Link        string
+	GUID        string
+}
+
+type ToCEntry struct {
+	GUID  string
+	Title string
 }
 
 type Podcast struct {
@@ -64,6 +70,7 @@ type Podcast struct {
 	Metadata    []Metadata
 	Link        string
 	// We don't care about FeedLink. It's a link to the XML file.
+	ToC []ToCEntry
 }
 
 type Page struct {
@@ -142,6 +149,10 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 		item.Title = parsedItem.Title
 		item.Link = parsedItem.Link
 
+		item.GUID = parsedItem.GUID
+
+		podcast.ToC = append(podcast.ToC, ToCEntry{item.GUID, item.Title})
+
 		if parsedItem.Image != nil {
 			item.Images = append(item.Images, Image{parsedItem.Image.Title, parsedItem.Image.URL})
 		}
@@ -186,6 +197,10 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 		}
 
 		podcast.Items = append(podcast.Items, item)
+	}
+
+	if len(podcast.ToC) == 1 {
+		podcast.ToC = nil
 	}
 
 	var pageBuilder bytes.Buffer

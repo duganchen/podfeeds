@@ -32,8 +32,18 @@
 {{ end }}
     </table>
 
+{{ if .ToC }}
+    <ul>
+{{ range .ToC }}
+        <li>
+            <a href="#{{ .GUID }}">{{ .Title }}</a>
+        </li>
+{{ end }}
+    </ul>
+{{ end }}
+
 {{ range .Items }}
-    <h2>{{ .Title }}</h2>
+    <h2><a name="{{ .GUID }}">{{ .Title }}</a></h2>
 
 {{ range .Images }}
     <p><img src="{{ .URL }}" alt="{{ .Title }}"></p>
