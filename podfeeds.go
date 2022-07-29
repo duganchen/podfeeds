@@ -298,16 +298,22 @@ func WriteResponse(w http.ResponseWriter, body []byte, r *http.Request) error {
 	return nil
 }
 
+// Only allow one podcasts-caching thread a a time
+var podcastCachingChannel = make(chan int, 1)
+
 func CachePodcasts(database *sql.DB) error {
+	<-podcastCachingChannel
 	feeds := make([]string, 0)
 
 	buf, err := ioutil.ReadFile("./podcasts.yaml")
 	if err != nil {
+		podcastCachingChannel <- 1
 		return err
 	}
 	err = yaml.Unmarshal(buf, &feeds)
 
 	if err != nil {
+		podcastCachingChannel <- 1
 		return err
 	}
 
@@ -322,6 +328,7 @@ func CachePodcasts(database *sql.DB) error {
 
 	_, err = database.Exec("DELETE FROM Pages")
 	if err != nil {
+		podcastCachingChannel <- 1
 		return err
 	}
 
@@ -336,6 +343,7 @@ func CachePodcasts(database *sql.DB) error {
 
 	err = g.Wait()
 	if err != nil {
+		podcastCachingChannel <- 1
 		return nil
 	}
 
@@ -351,12 +359,14 @@ func CachePodcasts(database *sql.DB) error {
 
 	statement, err := database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
 	if err != nil {
+		podcastCachingChannel <- 1
 		return err
 	}
 	defer statement.Close()
 
 	stat, err := os.Stat("./podcasts.yaml")
 	if err != nil {
+		podcastCachingChannel <- 1
 		log.Fatal(err)
 	}
 
@@ -368,6 +378,7 @@ func CachePodcasts(database *sql.DB) error {
 
 	_, err = statement.Exec(index.URL, index.ETag, index.LastModified, index.HTML)
 	if err != nil {
+		podcastCachingChannel <- 1
 		return err
 	}
 
@@ -385,31 +396,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	statement.Close()
 
 	// Build the page cache when we start. If necessary.
-
-	indexPage, err := LoadPage("/", database)
-
-	if err == sql.ErrNoRows {
-		err = CachePodcasts(database)
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else if err != nil {
-		log.Fatal(err)
-	} else {
-		stat, err := os.Stat("./podcasts.yaml")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if indexPage.LastModified != stat.ModTime().Format(http.TimeFormat) {
-			err = CachePodcasts(database)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-	}
+	podcastCachingChannel <- 1
+	go CachePodcasts(database)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		stat, err := os.Stat("./podcasts.yaml")
@@ -420,18 +411,10 @@ func main() {
 		page, err := LoadPage("/", database)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		if page.LastModified != stat.ModTime().Format(http.TimeFormat) {
-			err = CachePodcasts(database)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		page, err = LoadPage("/", database)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			go CachePodcasts(database)
 		}
 
 		err = WriteResponse(w, page.HTML, r)
@@ -540,6 +523,7 @@ func main() {
 			panic(err)
 		}
 	} else {
+		fmt.Print("Using port: 8080")
 		log.Fatal(http.ListenAndServe(port, nil))
 	}
 }
