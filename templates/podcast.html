@@ -1,83 +1,74 @@
 <!DOCTYPE html>
 <html lang="{{ .Language }}">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .Title }}</title>
 </head>
+
 <body>
     <h1>{{ .Title }}</h1>
 
-{{ range .Images }}
+    {{ range .Images }}
     <p><img src="{{ .URL }}" alt="{{ .Title }}"></p>
-{{ end }}
+    {{ end }}
 
     <div>
         {{ .Description }}
     </div>
 
     <table>
-{{ range .Metadata }}
+        {{ range .Metadata }}
         <tr>
             <td>{{ .Key }}</td>
             <td>{{ .Value }}</td>
         </tr>
-{{ end}}
-{{ if .Link }}
-    <tr>
-        <td>Link</td>
-        <td><a href="{{ .Link }}">{{ .Link }}</a></td>
-    </tr>
-{{ end }}
+        {{ end}}
     </table>
 
-{{ if .ToC }}
+    {{ if .ToC }}
     <ul>
-{{ range .ToC }}
+        {{ range .ToC }}
         <li>
             <a href="#{{ .GUID }}">{{ .Title }}</a>
         </li>
-{{ end }}
+        {{ end }}
     </ul>
-{{ end }}
+    {{ end }}
 
-{{ range .Items }}
+    {{ range .Items }}
     <h2><a name="{{ .GUID }}">{{ .Title }}</a></h2>
 
-{{ range .Images }}
+    {{ range .Images }}
     <p><img src="{{ .URL }}" alt="{{ .Title }}"></p>
-{{ end }}
+    {{ end }}
 
     <div>
         {{ .Description }}
     </div>
 
-{{ range .Enclosures }}
+    {{ range .Enclosures }}
     <object data="{{ .URL }}" type="{{ .Type }}">
         <p>
             <a href="{{ .URL }}">Enclosure</a>
         </p>
     </object>
-{{ end }}
+    {{ end }}
 
 
     <table>
-{{ range .Metadata }}
+        {{ range .Metadata }}
         <tr>
             <td>{{ .Key }}</td>
             <td>{{ .Value }}</td>
         </tr>
-{{ end }}
-{{ if .Link }}
-    <tr>
-        <td>Link</td>
-        <td><a href="{{ .Link }}">{{ .Link }}</a></td>
-    </tr>
-{{ end }}
+        {{ end }}
     </table>
 
-{{ end }}
+    {{ end }}
 
 </body>
+
 </html>

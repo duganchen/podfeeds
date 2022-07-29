@@ -52,7 +52,6 @@ type Item struct {
 	Title       string
 	Description string
 	Images      []Image
-	Link        string
 	GUID        string
 }
 
@@ -68,7 +67,6 @@ type Podcast struct {
 	Images      []Image
 	Items       []Item
 	Metadata    []Metadata
-	Link        string
 	// We don't care about FeedLink. It's a link to the XML file.
 	ToC []ToCEntry
 }
@@ -111,8 +109,6 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 	podcast.Title = parsed.Title
 	podcast.Description = parsed.Description
 
-	podcast.Link = parsed.Link
-
 	if parsed.Updated != "" {
 		podcast.Metadata = append(podcast.Metadata, Metadata{"Updated", parsed.Updated})
 	}
@@ -147,7 +143,6 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 		var item Item
 		item.Description = parsedItem.Description
 		item.Title = parsedItem.Title
-		item.Link = parsedItem.Link
 
 		item.GUID = parsedItem.GUID
 
