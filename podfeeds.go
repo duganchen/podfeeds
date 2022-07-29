@@ -292,11 +292,91 @@ func WriteResponse(w http.ResponseWriter, body []byte, r *http.Request) error {
 	return nil
 }
 
-func main() {
-	database, err := sql.Open("sqlite3", "./cache.sqlite3")
+// Only allow one podcasts-caching thread a a time
+var podcastCachingChannel = make(chan int, 1)
+
+func CachePodcasts(database *sql.DB) {
+
+	// Note that errors thrown here crash the server.
+
+	<-podcastCachingChannel
+	feeds := make([]string, 0)
+
+	buf, err := ioutil.ReadFile("./podcasts.yaml")
 	if err != nil {
 		log.Fatal(err)
 	}
+	err = yaml.Unmarshal(buf, &feeds)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Seriously, just don't let the user enter duplicate feeds.
+	seen := make(map[string]bool)
+	for _, feed := range feeds {
+		if seen[feed] {
+			log.Fatal("Duplicate feed")
+		}
+		seen[feed] = true
+	}
+
+	_, err = database.Exec("DELETE FROM Pages")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	subscriptions := Subscriptions{}
+
+	var mutex sync.Mutex
+	feedTitles := make(map[string]string)
+	g := new(errgroup.Group)
+	for _, feed := range feeds {
+		g.Go(CacheFeedAsync(feed, database, feedTitles, &mutex))
+	}
+
+	err = g.Wait()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for feed, title := range feedTitles {
+		subscription := Subscription{title, "/podcast?url=" + url.QueryEscape(feed)}
+		subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
+	}
+
+	buff := new(bytes.Buffer)
+	writer := gzip.NewWriter(buff)
+	indexTemplate.Execute(writer, subscriptions)
+	writer.Close()
+
+	statement, err := database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer statement.Close()
+
+	stat, err := os.Stat("./podcasts.yaml")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var index Page
+	index.URL = "/"
+	index.ETag = ""
+	index.LastModified = stat.ModTime().Format(http.TimeFormat)
+	index.HTML = buff.Bytes()
+
+	_, err = statement.Exec(index.URL, index.ETag, index.LastModified, index.HTML)
+	if err != nil {
+		log.Fatal(err)
+	}
+	podcastCachingChannel <- 1
+	return
+}
+
+func main() {
+	database, err := sql.Open("sqlite3", "./cache.sqlite3")
 
 	statement, err := database.Prepare("CREATE TABLE IF NOT EXISTS Pages (URL TEXT PRIMARY KEY, ETag Text, LastModified TEXT, HTML BLOB)")
 	if err != nil {
@@ -306,6 +386,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	statement.Close()
+
+	// Build the page cache when we start. If necessary.
+	podcastCachingChannel <- 1
+	go CachePodcasts(database)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		stat, err := os.Stat("./podcasts.yaml")
@@ -313,102 +398,16 @@ func main() {
 			log.Fatal(err)
 		}
 
-		feeds := make([]string, 0)
-
-		buf, err := ioutil.ReadFile("./podcasts.yaml")
+		page, err := LoadPage("/", database)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		err = yaml.Unmarshal(buf, &feeds)
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		if page.LastModified != stat.ModTime().Format(http.TimeFormat) {
+			go CachePodcasts(database)
 		}
 
-		// Seriously, just don't let the user enter duplicate feeds.
-		seen := make(map[string]bool)
-		for _, feed := range feeds {
-			if seen[feed] {
-				http.Error(w, "Duplicate feed", http.StatusInternalServerError)
-				return
-			}
-			seen[feed] = true
-		}
-
-		statement, err := database.Prepare("SELECT * FROM Pages WHERE URL = ?")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		// Not defering this results in a ver, very noticeable drop in performance.
-		defer statement.Close()
-
-		row := statement.QueryRow("/")
-		var index Page
-		err = row.Scan(&index.URL, &index.ETag, &index.LastModified, &index.HTML)
-
-		recache := false
-		if err == sql.ErrNoRows {
-			recache = true
-		} else if index.LastModified != stat.ModTime().Format(http.TimeFormat) {
-			recache = true
-		}
-
-		if recache {
-			_, err := database.Exec("DELETE FROM Pages")
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			subscriptions := Subscriptions{}
-
-			var mutex sync.Mutex
-			feedTitles := make(map[string]string)
-			g := new(errgroup.Group)
-			for _, feed := range feeds {
-				g.Go(CacheFeedAsync(feed, database, feedTitles, &mutex))
-			}
-
-			err = g.Wait()
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			for feed, title := range feedTitles {
-				subscription := Subscription{title, "/podcast?url=" + url.QueryEscape(feed)}
-				subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
-
-			}
-
-			buff := new(bytes.Buffer)
-			writer := gzip.NewWriter(buff)
-			indexTemplate.Execute(writer, subscriptions)
-			writer.Close()
-
-			statement, err = database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			defer statement.Close()
-
-			index.URL = "/"
-			index.ETag = ""
-			index.LastModified = stat.ModTime().Format(http.TimeFormat)
-			index.HTML = buff.Bytes()
-
-			_, err = statement.Exec(index.URL, index.ETag, index.LastModified, index.HTML)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		}
-
-		err = WriteResponse(w, index.HTML, r)
+		err = WriteResponse(w, page.HTML, r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
