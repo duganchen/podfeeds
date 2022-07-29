@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"database/sql"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -301,27 +300,29 @@ func WriteResponse(w http.ResponseWriter, body []byte, r *http.Request) error {
 // Only allow one podcasts-caching thread a a time
 var podcastCachingChannel = make(chan int, 1)
 
-func CachePodcasts(database *sql.DB) error {
+func CachePodcasts(database *sql.DB) {
+
+	// This just fails silently. It can obviously be improved.
 	<-podcastCachingChannel
 	feeds := make([]string, 0)
 
 	buf, err := ioutil.ReadFile("./podcasts.yaml")
 	if err != nil {
 		podcastCachingChannel <- 1
-		return err
+		return
 	}
 	err = yaml.Unmarshal(buf, &feeds)
 
 	if err != nil {
 		podcastCachingChannel <- 1
-		return err
+		return
 	}
 
 	// Seriously, just don't let the user enter duplicate feeds.
 	seen := make(map[string]bool)
 	for _, feed := range feeds {
 		if seen[feed] {
-			return errors.New("duplicate feed")
+			return
 		}
 		seen[feed] = true
 	}
@@ -329,7 +330,7 @@ func CachePodcasts(database *sql.DB) error {
 	_, err = database.Exec("DELETE FROM Pages")
 	if err != nil {
 		podcastCachingChannel <- 1
-		return err
+		return
 	}
 
 	subscriptions := Subscriptions{}
@@ -344,7 +345,7 @@ func CachePodcasts(database *sql.DB) error {
 	err = g.Wait()
 	if err != nil {
 		podcastCachingChannel <- 1
-		return nil
+		return
 	}
 
 	for feed, title := range feedTitles {
@@ -360,7 +361,7 @@ func CachePodcasts(database *sql.DB) error {
 	statement, err := database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
 	if err != nil {
 		podcastCachingChannel <- 1
-		return err
+		return
 	}
 	defer statement.Close()
 
@@ -379,10 +380,10 @@ func CachePodcasts(database *sql.DB) error {
 	_, err = statement.Exec(index.URL, index.ETag, index.LastModified, index.HTML)
 	if err != nil {
 		podcastCachingChannel <- 1
-		return err
+		return
 	}
 
-	return nil
+	return
 }
 
 func main() {
