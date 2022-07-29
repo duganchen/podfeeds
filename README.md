@@ -42,9 +42,15 @@ hyphen and a space. For example:
     - https://www.cbc.ca/podcasting/includes/asithappens.xml
     - https://www.cbc.ca/podcasting/includes/cbcpowerandpolitics.xml
 
+## Building Podfeeds
+
+    go build
+
 ## Running Podfeeds
 
-Start the server:
+    ./podfeeds
+
+A developer could also start it with the slower:
 
     go run .
 
