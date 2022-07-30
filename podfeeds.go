@@ -258,11 +258,11 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 	return page.Title, nil
 }
 
-func CacheFeedAsync(feed string, database *sql.DB, feedTitles map[string]string, mutex *sync.Mutex) func() error {
+func FetchPageAsync(feed string, feedIndexes map[string]int, mutex *sync.Mutex, pages []Page) func() error {
 	return func() error {
-		title, err := CacheFeed(feed, database)
+		page, err := FetchPage(feed)
 		mutex.Lock()
-		feedTitles[feed] = title
+		pages[feedIndexes[feed]] = page
 		mutex.Unlock()
 		return err
 	}
@@ -327,13 +327,14 @@ func CachePodcasts(database *sql.DB) {
 		log.Fatal(err)
 	}
 
-	// Seriously, just don't let the user enter duplicate feeds.
-	seen := make(map[string]bool)
-	for _, feed := range feeds {
-		if seen[feed] {
+	// Used to reassemble the podcasts in their original order
+	indexes := make(map[string]int)
+	for i, feed := range feeds {
+		// Seriously, just don't let the user enter duplicate feeds.
+		if indexes[feed] > 0 {
 			log.Fatal("Duplicate feed")
 		}
-		seen[feed] = true
+		indexes[feed] = i
 	}
 
 	_, err = database.Exec("DELETE FROM Pages")
@@ -344,10 +345,10 @@ func CachePodcasts(database *sql.DB) {
 	subscriptions := Subscriptions{}
 
 	var mutex sync.Mutex
-	feedTitles := make(map[string]string)
+	pages := make([]Page, len(feeds))
 	g := new(errgroup.Group)
 	for _, feed := range feeds {
-		g.Go(CacheFeedAsync(feed, database, feedTitles, &mutex))
+		g.Go(FetchPageAsync(feed, indexes, &mutex, pages))
 	}
 
 	err = g.Wait()
@@ -355,9 +356,23 @@ func CachePodcasts(database *sql.DB) {
 		log.Fatal(err)
 	}
 
-	for feed, title := range feedTitles {
-		subscription := Subscription{title, "/podcast?url=" + url.QueryEscape(feed)}
+	for _, page := range pages {
+		subscription := Subscription{page.Title, "/podcast?url=" + url.QueryEscape(page.URL)}
 		subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
+
+		// I am aware of the repetition with CachePage
+
+		statement, err := database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer statement.Close()
+
+		_, err = statement.Exec(page.URL, page.ETag, page.LastModified, page.HTML)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 	}
 
 	buff := new(bytes.Buffer)
@@ -403,6 +418,7 @@ func main() {
 	statement.Close()
 
 	// Build the page cache when we start. If necessary.
+	podcastCachingChannel <- 1
 	go CachePodcasts(database)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
