@@ -85,8 +85,3 @@ Follow "Enclosure" links to play them.
 ![Playing](images/playing.png)
 
 Or press "d" to download them or whatever; Lynx is very powerful.
-
-## Notes
-
-For performance, Podfeeds maintains an internal cache of rendered pages. If you want to rebuild it (perhaps after an update), simply update its modification
-time (use "touch").
