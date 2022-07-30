@@ -28,10 +28,6 @@ type Subscription struct {
 	Url   string
 }
 
-type Subscriptions struct {
-	Subscriptions []Subscription
-}
-
 type Metadata struct {
 	Key   string
 	Value string
@@ -423,7 +419,7 @@ func CachePodcasts(cache PageCache) {
 		log.Fatal(err)
 	}
 
-	subscriptions := Subscriptions{}
+	var subscriptions []Subscription
 
 	var mutex sync.Mutex
 	fetchedInfos := make([]FetchedInfo, len(feeds))
@@ -439,7 +435,7 @@ func CachePodcasts(cache PageCache) {
 
 	for _, fetchedInfo := range fetchedInfos {
 		subscription := Subscription{fetchedInfo.Subscription.Title, "/podcast?url=" + url.QueryEscape(fetchedInfo.Subscription.Url)}
-		subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
+		subscriptions = append(subscriptions, subscription)
 
 		err = cache.Set(fetchedInfo.Subscription.Url, fetchedInfo.Page)
 		if err != nil {

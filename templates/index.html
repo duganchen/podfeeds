@@ -8,7 +8,7 @@
 </head>
 <body>
     <h1>Podcasts</h1>
-{{ range .Subscriptions }}
+{{ range . }}
     <p>
         <a href="{{ .Url }}">{{ .Title }}</a>
     </p>
