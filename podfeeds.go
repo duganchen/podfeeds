@@ -15,6 +15,7 @@ import (
 	"sync"
 	"text/template"
 
+	"github.com/fsnotify/fsnotify"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/sync/errgroup"
 
@@ -311,6 +312,32 @@ func WriteResponse(w http.ResponseWriter, body []byte, r *http.Request) error {
 // Only allow one podcasts-caching thread a a time
 var podcastCachingChannel = make(chan int, 1)
 
+func SetupWatcher(database *sql.DB, watcher *fsnotify.Watcher) {
+	// The synchronization is: cache podcasts on program start, then set up a watcher
+	// to recache every time podcasts.yaml changes.
+
+	<-podcastCachingChannel
+	watcher.Add("podcasts.yaml")
+	podcastCachingChannel <- 1
+	go func() {
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					go CachePodcasts(database)
+				}
+			case err := <-watcher.Errors:
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+		}
+	}()
+}
+
 func CachePodcasts(database *sql.DB) {
 	// Note that errors thrown here crash the server.
 
@@ -421,20 +448,31 @@ func main() {
 	podcastCachingChannel <- 1
 	go CachePodcasts(database)
 
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
+	}
+	go SetupWatcher(database, watcher)
+	defer watcher.Close()
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		stat, err := os.Stat("./podcasts.yaml")
-		if err != nil {
-			log.Fatal(err)
-		}
+		/*
+			stat, err := os.Stat("./podcasts.yaml")
+			if err != nil {
+				log.Fatal(err)
+			}
+		*/
 
 		page, err := LoadPage("/", database)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if page.LastModified != stat.ModTime().Format(http.TimeFormat) {
-			go CachePodcasts(database)
-		}
+		/*
+			if page.LastModified != stat.ModTime().Format(http.TimeFormat) {
+				go CachePodcasts(database)
+			}
+		*/
 
 		err = WriteResponse(w, page.HTML, r)
 		if err != nil {
