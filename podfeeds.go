@@ -72,14 +72,6 @@ type Podcast struct {
 	ToC []ToCEntry
 }
 
-type Page struct {
-	URL          string
-	Title        string
-	ETag         string
-	LastModified string
-	HTML         []byte
-}
-
 var (
 	indexTemplate   *template.Template
 	podcastTemplate *template.Template
@@ -88,15 +80,15 @@ var (
 // Start of the page cache API, which is a key-value store mapping feed URLs to StoredPages.
 
 // A podcast page, rendered and stored in the cache.
-type StoredPage struct {
+type Page struct {
 	ETag         string
 	LastModified string
 	HTML         []byte // Yes, they're stored gzipped.
 }
 
 type PageCache interface {
-	Get(string) (StoredPage, error)
-	Set(string, StoredPage) error
+	Get(string) (Page, error)
+	Set(string, Page) error
 	Clear() error
 	Erase(string) error
 }
@@ -124,14 +116,14 @@ func NewSQLiteCache() (SQLiteCache, error) {
 	return SQLiteCache{db}, nil
 }
 
-func (cache SQLiteCache) Get(feed string) (StoredPage, error) {
+func (cache SQLiteCache) Get(feed string) (Page, error) {
 	statement, err := cache.db.Prepare("SELECT * FROM Pages WHERE URL = ?")
 	if err != nil {
-		return StoredPage{}, err
+		return Page{}, err
 	}
 	row := statement.QueryRow(feed)
 	defer statement.Close()
-	var page StoredPage
+	var page Page
 	var url string
 	err = row.Scan(&url, &page.ETag, &page.LastModified, &page.HTML)
 	if err == sql.ErrNoRows {
@@ -140,7 +132,7 @@ func (cache SQLiteCache) Get(feed string) (StoredPage, error) {
 	return page, nil
 }
 
-func (cache SQLiteCache) Set(feed string, page StoredPage) error {
+func (cache SQLiteCache) Set(feed string, page Page) error {
 	statement, err := cache.db.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
 	if err != nil {
 		return err
@@ -176,22 +168,27 @@ func CloseSQLiteCache(cache SQLiteCache) {
 
 // End of cache API
 
+type FetchedInfo struct {
+	Page         Page
+	Subscription Subscription
+}
+
 func init() {
 	indexTemplate = template.Must(template.ParseFiles("./templates/index.html"))
 	podcastTemplate = template.Must(template.ParseFiles("./templates/podcast.html"))
 }
 
-func FetchPage(feed string) (Page, error) {
+func FetchPage(feed string) (FetchedInfo, error) {
 	resp, err := http.Get(feed)
 	if err != nil {
-		return Page{}, err
+		return FetchedInfo{Page{}, Subscription{}}, err
 	}
 
 	fp := gofeed.NewParser()
 
 	parsed, err := fp.Parse(resp.Body)
 	if err != nil {
-		return Page{}, err
+		return FetchedInfo{Page{}, Subscription{}}, err
 	}
 
 	var podcast Podcast
@@ -294,14 +291,14 @@ func FetchPage(feed string) (Page, error) {
 	var pageBuilder bytes.Buffer
 	err = podcastTemplate.Execute(&pageBuilder, podcast)
 	if err != nil {
-		return Page{}, err
+		return FetchedInfo{Page{}, Subscription{}}, err
 	}
 
 	page := new(bytes.Buffer)
 	writer := gzip.NewWriter(page)
 	_, err = writer.Write(pageBuilder.Bytes())
 	if err != nil {
-		return Page{}, err
+		return FetchedInfo{Page{}, Subscription{}}, err
 	}
 	writer.Close()
 
@@ -325,16 +322,17 @@ func FetchPage(feed string) (Page, error) {
 	value.ETag = etag
 	value.HTML = page.Bytes()
 	value.LastModified = lastModified
-	value.URL = feed
-	value.Title = podcast.Title
-	return value, nil
+	var subscription Subscription
+	subscription.Url = feed
+	subscription.Title = podcast.Title
+	return FetchedInfo{value, subscription}, nil
 }
 
-func FetchPageAsync(feed string, feedIndexes map[string]int, mutex *sync.Mutex, pages []Page) func() error {
+func FetchPageAsync(feed string, feedIndexes map[string]int, mutex *sync.Mutex, fetchedInfos []FetchedInfo) func() error {
 	return func() error {
-		page, err := FetchPage(feed)
+		fetchedInfo, err := FetchPage(feed)
 		mutex.Lock()
-		pages[feedIndexes[feed]] = page
+		fetchedInfos[feedIndexes[feed]] = fetchedInfo
 		mutex.Unlock()
 		return err
 	}
@@ -428,10 +426,10 @@ func CachePodcasts(cache PageCache) {
 	subscriptions := Subscriptions{}
 
 	var mutex sync.Mutex
-	pages := make([]Page, len(feeds))
+	fetchedInfos := make([]FetchedInfo, len(feeds))
 	g := new(errgroup.Group)
 	for _, feed := range feeds {
-		g.Go(FetchPageAsync(feed, indexes, &mutex, pages))
+		g.Go(FetchPageAsync(feed, indexes, &mutex, fetchedInfos))
 	}
 
 	err = g.Wait()
@@ -439,11 +437,11 @@ func CachePodcasts(cache PageCache) {
 		log.Fatal(err)
 	}
 
-	for _, page := range pages {
-		subscription := Subscription{page.Title, "/podcast?url=" + url.QueryEscape(page.URL)}
+	for _, fetchedInfo := range fetchedInfos {
+		subscription := Subscription{fetchedInfo.Subscription.Title, "/podcast?url=" + url.QueryEscape(fetchedInfo.Subscription.Url)}
 		subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
 
-		err = cache.Set(page.URL, StoredPage{page.ETag, page.LastModified, page.HTML})
+		err = cache.Set(fetchedInfo.Subscription.Url, fetchedInfo.Page)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -461,13 +459,11 @@ func CachePodcasts(cache PageCache) {
 	}
 
 	var index Page
-	index.URL = "/"
 	index.ETag = ""
 	index.LastModified = stat.ModTime().Format(http.TimeFormat)
 	index.HTML = buff.Bytes()
 
-	// _, err = statement.Exec(index.URL, index.ETag, index.LastModified, index.HTML)
-	err = cache.Set(index.URL, StoredPage{index.ETag, index.LastModified, index.HTML})
+	err = cache.Set("/", index)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -552,14 +548,13 @@ func main() {
 				return
 			}
 
-			// _, err = CacheFeed(page.URL, database)
-			fetchedPage, err := FetchPage(url)
+			fetchedInfo, err := FetchPage(url)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			page = StoredPage{fetchedPage.ETag, fetchedPage.LastModified, fetchedPage.HTML}
+			page = Page{fetchedInfo.Page.ETag, fetchedInfo.Page.LastModified, fetchedInfo.Page.HTML}
 			err = cache.Set(url, page)
 
 			if err != nil {
