@@ -31,7 +31,7 @@ Gather your podcast feed URLs. One way to find them is to
 use the "podfeed" script I posted here:
 
 [CLI app to get podcast feed URLs
-](https://www.linuxquestions.org/questions/linuxquestions-org-member-success-stories-23/cli-app-to-get-podcast-feed-urls-4175656322/)
+](https://www.linuxquestions.org/questions/linuxquestions-org-member-success-stories-23/cli-app-to-get-podcast-feed-urls-4175656322/#post6363987)
 
 Paste them into a file in the root directory (the one with files like go.mod), named "podcasts.yaml". Separate each line with a
 hyphen and a space, and use # for comments. For example:
@@ -50,10 +50,6 @@ hyphen and a space, and use # for comments. For example:
 ## Running Podfeeds
 
     ./podfeeds
-
-A developer could also start it with the slower:
-
-    go run .
 
 By default, the server will listen on port 8080. Set the PORT environment variable to override it. Set it to port 0 to let it pick
 the port.
