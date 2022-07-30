@@ -73,6 +73,7 @@ type Podcast struct {
 
 type Page struct {
 	URL          string
+	Title        string
 	ETag         string
 	LastModified string
 	HTML         []byte
@@ -88,17 +89,17 @@ func init() {
 	podcastTemplate = template.Must(template.ParseFiles("./templates/podcast.html"))
 }
 
-func CacheFeed(feed string, database *sql.DB) (string, error) {
+func FetchPage(feed string) (Page, error) {
 	resp, err := http.Get(feed)
 	if err != nil {
-		return "", err
+		return Page{}, err
 	}
 
 	fp := gofeed.NewParser()
 
 	parsed, err := fp.Parse(resp.Body)
 	if err != nil {
-		return "", err
+		return Page{}, err
 	}
 
 	var podcast Podcast
@@ -201,22 +202,16 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 	var pageBuilder bytes.Buffer
 	err = podcastTemplate.Execute(&pageBuilder, podcast)
 	if err != nil {
-		return "", err
+		return Page{}, err
 	}
 
 	page := new(bytes.Buffer)
 	writer := gzip.NewWriter(page)
 	_, err = writer.Write(pageBuilder.Bytes())
 	if err != nil {
-		return "", err
+		return Page{}, err
 	}
 	writer.Close()
-
-	statement, err := database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
-	if err != nil {
-		return "", err
-	}
-	defer statement.Close()
 
 	etags := resp.Header[http.CanonicalHeaderKey("ETag")]
 	var etag string
@@ -234,12 +229,33 @@ func CacheFeed(feed string, database *sql.DB) (string, error) {
 		lastModified = ""
 	}
 
-	_, err = statement.Exec(feed, etag, lastModified, page.Bytes())
+	var value Page
+	value.ETag = etag
+	value.HTML = page.Bytes()
+	value.LastModified = lastModified
+	value.URL = feed
+	value.Title = podcast.Title
+	return value, nil
+}
+
+func CacheFeed(feed string, database *sql.DB) (string, error) {
+	page, err := FetchPage(feed)
 	if err != nil {
 		return "", err
 	}
 
-	return parsed.Title, nil
+	statement, err := database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
+	if err != nil {
+		return "", err
+	}
+	defer statement.Close()
+
+	_, err = statement.Exec(feed, page.ETag, page.LastModified, page.HTML)
+	if err != nil {
+		return "", err
+	}
+
+	return page.Title, nil
 }
 
 func CacheFeedAsync(feed string, database *sql.DB, feedTitles map[string]string, mutex *sync.Mutex) func() error {
@@ -296,7 +312,6 @@ func WriteResponse(w http.ResponseWriter, body []byte, r *http.Request) error {
 var podcastCachingChannel = make(chan int, 1)
 
 func CachePodcasts(database *sql.DB) {
-
 	// Note that errors thrown here crash the server.
 
 	<-podcastCachingChannel
@@ -372,7 +387,6 @@ func CachePodcasts(database *sql.DB) {
 		log.Fatal(err)
 	}
 	podcastCachingChannel <- 1
-	return
 }
 
 func main() {
@@ -389,7 +403,6 @@ func main() {
 	statement.Close()
 
 	// Build the page cache when we start. If necessary.
-	podcastCachingChannel <- 1
 	go CachePodcasts(database)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -513,6 +526,7 @@ func main() {
 			panic(err)
 		}
 	} else {
+		fmt.Print("Using port: 8080")
 		log.Fatal(http.ListenAndServe(port, nil))
 	}
 }
