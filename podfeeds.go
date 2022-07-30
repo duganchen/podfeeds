@@ -85,6 +85,97 @@ var (
 	podcastTemplate *template.Template
 )
 
+// Start of the page cache API, which is a key-value store mapping feed URLs to StoredPages.
+
+// A podcast page, rendered and stored in the cache.
+type StoredPage struct {
+	ETag         string
+	LastModified string
+	HTML         []byte // Yes, they're stored gzipped.
+}
+
+type PageCache interface {
+	Get(string) (StoredPage, error)
+	Set(string, StoredPage) error
+	Clear() error
+	Erase(string) error
+}
+
+type SQLiteCache struct {
+	db *sql.DB
+}
+
+func NewSQLiteCache() (SQLiteCache, error) {
+	db, err := sql.Open("sqlite3", "./cache.sqlite3")
+	if err != nil {
+		return SQLiteCache{}, nil
+	}
+
+	statement, err := db.Prepare("CREATE TABLE IF NOT EXISTS Pages (URL TEXT PRIMARY KEY, ETag Text, LastModified TEXT, HTML BLOB)")
+	if err != nil {
+		return SQLiteCache{}, err
+	}
+	_, err = statement.Exec()
+	if err != nil {
+		return SQLiteCache{}, err
+	}
+	defer statement.Close()
+
+	return SQLiteCache{db}, nil
+}
+
+func (cache SQLiteCache) Get(feed string) (StoredPage, error) {
+	statement, err := cache.db.Prepare("SELECT * FROM Pages WHERE URL = ?")
+	if err != nil {
+		return StoredPage{}, err
+	}
+	row := statement.QueryRow(feed)
+	defer statement.Close()
+	var page StoredPage
+	var url string
+	err = row.Scan(&url, &page.ETag, &page.LastModified, &page.HTML)
+	if err == sql.ErrNoRows {
+		return page, err
+	}
+	return page, nil
+}
+
+func (cache SQLiteCache) Set(feed string, page StoredPage) error {
+	statement, err := cache.db.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
+	if err != nil {
+		return err
+	}
+	defer statement.Close()
+
+	_, err = statement.Exec(feed, page.ETag, page.LastModified, page.HTML)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (cache SQLiteCache) Erase(feed string) error {
+	stmt, err := cache.db.Prepare("DELETE FROM Pages WHERE URL = ?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(feed)
+	return err
+}
+
+func (cache SQLiteCache) Clear() error {
+	_, err := cache.db.Exec("DELETE FROM Pages")
+	return err
+}
+
+func CloseSQLiteCache(cache SQLiteCache) {
+	cache.db.Close()
+}
+
+// End of cache API
+
 func init() {
 	indexTemplate = template.Must(template.ParseFiles("./templates/index.html"))
 	podcastTemplate = template.Must(template.ParseFiles("./templates/podcast.html"))
@@ -239,26 +330,6 @@ func FetchPage(feed string) (Page, error) {
 	return value, nil
 }
 
-func CacheFeed(feed string, database *sql.DB) (string, error) {
-	page, err := FetchPage(feed)
-	if err != nil {
-		return "", err
-	}
-
-	statement, err := database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
-	if err != nil {
-		return "", err
-	}
-	defer statement.Close()
-
-	_, err = statement.Exec(feed, page.ETag, page.LastModified, page.HTML)
-	if err != nil {
-		return "", err
-	}
-
-	return page.Title, nil
-}
-
 func FetchPageAsync(feed string, feedIndexes map[string]int, mutex *sync.Mutex, pages []Page) func() error {
 	return func() error {
 		page, err := FetchPage(feed)
@@ -267,21 +338,6 @@ func FetchPageAsync(feed string, feedIndexes map[string]int, mutex *sync.Mutex, 
 		mutex.Unlock()
 		return err
 	}
-}
-
-func LoadPage(url string, database *sql.DB) (Page, error) {
-	var page Page
-	statement, err := database.Prepare("SELECT * FROM Pages WHERE URL = ?")
-	if err != nil {
-		return page, err
-	}
-	row := statement.QueryRow(url)
-	defer statement.Close()
-	err = row.Scan(&page.URL, &page.ETag, &page.LastModified, &page.HTML)
-	if err == sql.ErrNoRows {
-		return page, err
-	}
-	return page, nil
 }
 
 func WriteResponse(w http.ResponseWriter, body []byte, r *http.Request) error {
@@ -312,7 +368,7 @@ func WriteResponse(w http.ResponseWriter, body []byte, r *http.Request) error {
 // Only allow one podcasts-caching thread a a time
 var podcastCachingChannel = make(chan int, 1)
 
-func SetupWatcher(database *sql.DB, watcher *fsnotify.Watcher) {
+func SetupWatcher(cache PageCache, watcher *fsnotify.Watcher) {
 	// The synchronization is: cache podcasts on program start, then set up a watcher
 	// to recache every time podcasts.yaml changes.
 
@@ -327,7 +383,7 @@ func SetupWatcher(database *sql.DB, watcher *fsnotify.Watcher) {
 					return
 				}
 				if event.Op&fsnotify.Write == fsnotify.Write {
-					go CachePodcasts(database)
+					go CachePodcasts(cache)
 				}
 			case err := <-watcher.Errors:
 				if err != nil {
@@ -338,7 +394,7 @@ func SetupWatcher(database *sql.DB, watcher *fsnotify.Watcher) {
 	}()
 }
 
-func CachePodcasts(database *sql.DB) {
+func CachePodcasts(cache PageCache) {
 	// Note that errors thrown here crash the server.
 
 	<-podcastCachingChannel
@@ -364,7 +420,7 @@ func CachePodcasts(database *sql.DB) {
 		indexes[feed] = i
 	}
 
-	_, err = database.Exec("DELETE FROM Pages")
+	cache.Clear()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -387,15 +443,7 @@ func CachePodcasts(database *sql.DB) {
 		subscription := Subscription{page.Title, "/podcast?url=" + url.QueryEscape(page.URL)}
 		subscriptions.Subscriptions = append(subscriptions.Subscriptions, subscription)
 
-		// I am aware of the repetition with CachePage
-
-		statement, err := database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer statement.Close()
-
-		_, err = statement.Exec(page.URL, page.ETag, page.LastModified, page.HTML)
+		err = cache.Set(page.URL, StoredPage{page.ETag, page.LastModified, page.HTML})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -406,12 +454,6 @@ func CachePodcasts(database *sql.DB) {
 	writer := gzip.NewWriter(buff)
 	indexTemplate.Execute(writer, subscriptions)
 	writer.Close()
-
-	statement, err := database.Prepare("INSERT INTO Pages VALUES (?, ?, ?, ?)")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer statement.Close()
 
 	stat, err := os.Stat("./podcasts.yaml")
 	if err != nil {
@@ -424,7 +466,8 @@ func CachePodcasts(database *sql.DB) {
 	index.LastModified = stat.ModTime().Format(http.TimeFormat)
 	index.HTML = buff.Bytes()
 
-	_, err = statement.Exec(index.URL, index.ETag, index.LastModified, index.HTML)
+	// _, err = statement.Exec(index.URL, index.ETag, index.LastModified, index.HTML)
+	err = cache.Set(index.URL, StoredPage{index.ETag, index.LastModified, index.HTML})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -432,48 +475,29 @@ func CachePodcasts(database *sql.DB) {
 }
 
 func main() {
-	database, err := sql.Open("sqlite3", "./cache.sqlite3")
-
-	statement, err := database.Prepare("CREATE TABLE IF NOT EXISTS Pages (URL TEXT PRIMARY KEY, ETag Text, LastModified TEXT, HTML BLOB)")
+	cache, err := NewSQLiteCache()
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = statement.Exec()
-	if err != nil {
-		log.Fatal(err)
-	}
-	statement.Close()
+	defer CloseSQLiteCache(cache)
 
 	// Build the page cache when we start. If necessary.
 	podcastCachingChannel <- 1
-	go CachePodcasts(database)
+	go CachePodcasts(cache)
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
 	}
-	go SetupWatcher(database, watcher)
+	go SetupWatcher(cache, watcher)
 	defer watcher.Close()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		/*
-			stat, err := os.Stat("./podcasts.yaml")
-			if err != nil {
-				log.Fatal(err)
-			}
-		*/
-
-		page, err := LoadPage("/", database)
+		page, err := cache.Get("/")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		/*
-			if page.LastModified != stat.ModTime().Format(http.TimeFormat) {
-				go CachePodcasts(database)
-			}
-		*/
-
 		err = WriteResponse(w, page.HTML, r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -489,7 +513,7 @@ func main() {
 			return
 		}
 
-		page, err := LoadPage(url, database)
+		page, err := cache.Get(url)
 		if err == sql.ErrNoRows {
 			http.Error(w, "Podcast URL not found", http.StatusNotFound)
 			return
@@ -500,7 +524,7 @@ func main() {
 		}
 
 		var client http.Client
-		req, err := http.NewRequest("GET", page.URL, nil)
+		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -522,29 +546,22 @@ func main() {
 		}
 
 		if resp.StatusCode != http.StatusNotModified {
-
-			stmt, err := database.Prepare("DELETE FROM Pages WHERE URL = ?")
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			defer stmt.Close()
-			_, err = stmt.Exec(page.URL)
+			err = cache.Erase(url)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			_, err = CacheFeed(page.URL, database)
+			// _, err = CacheFeed(page.URL, database)
+			fetchedPage, err := FetchPage(url)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-
-			page, err = LoadPage(url, database)
-			if err == sql.ErrNoRows {
-				http.Error(w, "Podcast URL not found", http.StatusNotFound)
 				return
 			}
+
+			page = StoredPage{fetchedPage.ETag, fetchedPage.LastModified, fetchedPage.HTML}
+			err = cache.Set(url, page)
+
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
