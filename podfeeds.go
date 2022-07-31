@@ -38,17 +38,11 @@ type Enclosure struct {
 	Type string
 }
 
-type Image struct {
-	Title string
-	URL   string
-}
-
 type Item struct {
 	Enclosures  []Enclosure
 	Metadata    []Metadata
 	Title       string
 	Description string
-	Images      []Image
 	GUID        string
 }
 
@@ -61,7 +55,6 @@ type Podcast struct {
 	Title       string
 	Description string
 	Language    string
-	Images      []Image
 	Items       []Item
 	Metadata    []Metadata
 	// We don't care about FeedLink. It's a link to the XML file.
@@ -190,8 +183,6 @@ func FetchPage(feed string) (FetchedInfo, error) {
 	var podcast Podcast
 	podcast.Language = parsed.Language
 
-	podcast.Images = append(podcast.Images, Image{parsed.Image.Title, parsed.Image.URL})
-
 	podcast.Title = parsed.Title
 	podcast.Description = parsed.Description
 
@@ -233,10 +224,6 @@ func FetchPage(feed string) (FetchedInfo, error) {
 		item.GUID = parsedItem.GUID
 
 		podcast.ToC = append(podcast.ToC, ToCEntry{item.GUID, item.Title})
-
-		if parsedItem.Image != nil {
-			item.Images = append(item.Images, Image{parsedItem.Image.Title, parsedItem.Image.URL})
-		}
 
 		for _, enclosure := range parsedItem.Enclosures {
 			item.Enclosures = append(item.Enclosures, Enclosure{enclosure.URL, enclosure.Type})

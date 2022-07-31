@@ -11,10 +11,6 @@
 <body>
     <h1>{{ .Title }}</h1>
 
-    {{ range .Images }}
-    <p><img src="{{ .URL }}" alt="{{ .Title }}"></p>
-    {{ end }}
-
     <div>
         {{ .Description }}
     </div>
@@ -39,11 +35,7 @@
     {{ end }}
 
     {{ range .Items }}
-    <h2><a name="{{ .GUID }}">{{ .Title }}</a></h2>
-
-    {{ range .Images }}
-    <p><img src="{{ .URL }}" alt="{{ .Title }}"></p>
-    {{ end }}
+    <h2 id="{{ .GUID }}">{{ .Title }}</h2>
 
     <div>
         {{ .Description }}
