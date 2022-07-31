@@ -40,11 +40,9 @@
     </div>
 
     {{ range .Enclosures }}
-    <object data="{{ .URL }}" type="{{ .Type }}">
-        <p>
-            <a href="{{ .URL }}">Enclosure</a>
-        </p>
-    </object>
+    <p>
+        <a href="{{ .URL }}">Enclosure</a>
+    </p>
     {{ end }}
 
 
