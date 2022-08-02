@@ -198,7 +198,7 @@ func FetchPage(feed string) (FetchedInfo, error) {
 		var authorsBuilder strings.Builder
 		for _, author := range parsed.Authors {
 			authorsBuilder.WriteString(author.Name)
-			if author.Email != {
+			if author.Email != "" {
 				authorsBuilder.WriteString(" (")
 				authorsBuilder.WriteString(author.Email)
 				authorsBuilder.WriteString(") ")
