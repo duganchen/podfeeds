@@ -13,15 +13,6 @@
         {{ .Description }}
     </div>
 
-    <table>
-        {{ range .Metadata }}
-        <tr>
-            <td>{{ .Key }}</td>
-            <td>{{ .Value }}</td>
-        </tr>
-        {{ end}}
-    </table>
-
     {{ if .ToC }}
     <ul>
         {{ range .ToC }}

@@ -81,3 +81,8 @@ Follow "Enclosure" links to play them.
 ![Playing](images/playing.png)
 
 Or press "d" to download them or whatever; Lynx is very powerful.
+
+## Troubleshooting
+
+If you need to rebuild Podfeeds' internal page cache, then shut it down, delete cache.sqlite3,
+and restart it.

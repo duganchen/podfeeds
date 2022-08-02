@@ -56,7 +56,6 @@ type Podcast struct {
 	Description string
 	Language    string
 	Items       []Item
-	Metadata    []Metadata
 	// We don't care about FeedLink. It's a link to the XML file.
 	ToC []ToCEntry
 }
@@ -185,42 +184,6 @@ func FetchPage(feed string) (FetchedInfo, error) {
 
 	podcast.Title = parsed.Title
 	podcast.Description = parsed.Description
-
-	if parsed.Updated != "" {
-		podcast.Metadata = append(podcast.Metadata, Metadata{"Updated", parsed.Updated})
-	}
-
-	if parsed.Published != "" {
-		podcast.Metadata = append(podcast.Metadata, Metadata{"Published", parsed.Published})
-	}
-
-	var authorsBuilder strings.Builder
-	for _, author := range parsed.Authors {
-		name := strings.TrimSpace(author.Name)
-		if name != "" {
-			authorsBuilder.WriteString(name)
-		}
-
-		email := strings.TrimSpace(author.Email)
-		if email != "" {
-			authorsBuilder.WriteString(" (")
-			authorsBuilder.WriteString(email)
-			authorsBuilder.WriteString(") ")
-		}
-	}
-
-	authors := strings.TrimSpace(authorsBuilder.String())
-	if authors != "" {
-		podcast.Metadata = append(podcast.Metadata, Metadata{"Authors", authors})
-	}
-
-	// We don't present categories. They're for search engines to look at, not for
-	// end users to look at.
-
-	// Don't bother with Copyright. If it's there, it gets rendered as
-	// Copyright	Copyright © CBC 2022
-
-	// Don't need the 'Generator'. It's what was used to generate the feed.
 
 	for _, parsedItem := range parsed.Items {
 		var item Item
