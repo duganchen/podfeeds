@@ -217,9 +217,8 @@ func FetchPage(feed string) (FetchedInfo, error) {
 	// We don't present categories. They're for search engines to look at, not for
 	// end users to look at.
 
-	if parsed.Copyright != "" {
-		podcast.Metadata = append(podcast.Metadata, Metadata{"Copyright", parsed.Copyright})
-	}
+	// Don't bother with Copyright. If it's there, it gets rendered as
+	// Copyright	Copyright © CBC 2022
 
 	// Don't need the 'Generator'. It's what was used to generate the feed.
 
