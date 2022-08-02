@@ -214,9 +214,7 @@ func FetchPage(feed string) (FetchedInfo, error) {
 		podcast.Metadata = append(podcast.Metadata, Metadata{"Copyright", parsed.Copyright})
 	}
 
-	if parsed.Generator != "" {
-		podcast.Metadata = append(podcast.Metadata, Metadata{"Generator", parsed.Generator})
-	}
+	// Don't need the 'Generator'. It's what was used to generate the feed.
 
 	for _, parsedItem := range parsed.Items {
 		var item Item
