@@ -198,9 +198,11 @@ func FetchPage(feed string) (FetchedInfo, error) {
 		var authorsBuilder strings.Builder
 		for _, author := range parsed.Authors {
 			authorsBuilder.WriteString(author.Name)
-			authorsBuilder.WriteString(" (")
-			authorsBuilder.WriteString(author.Email)
-			authorsBuilder.WriteString(") ")
+			if author.Email != {
+				authorsBuilder.WriteString(" (")
+				authorsBuilder.WriteString(author.Email)
+				authorsBuilder.WriteString(") ")
+			}
 		}
 		podcast.Metadata = append(podcast.Metadata, Metadata{"Authors", authorsBuilder.String()})
 	}
