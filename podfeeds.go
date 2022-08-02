@@ -194,17 +194,24 @@ func FetchPage(feed string) (FetchedInfo, error) {
 		podcast.Metadata = append(podcast.Metadata, Metadata{"Published", parsed.Published})
 	}
 
-	if len(parsed.Authors) > 0 {
-		var authorsBuilder strings.Builder
-		for _, author := range parsed.Authors {
-			authorsBuilder.WriteString(author.Name)
-			if author.Email != "" {
-				authorsBuilder.WriteString(" (")
-				authorsBuilder.WriteString(author.Email)
-				authorsBuilder.WriteString(") ")
-			}
+	var authorsBuilder strings.Builder
+	for _, author := range parsed.Authors {
+		name := strings.TrimSpace(author.Name)
+		if name != "" {
+			authorsBuilder.WriteString(name)
 		}
-		podcast.Metadata = append(podcast.Metadata, Metadata{"Authors", authorsBuilder.String()})
+
+		email := strings.TrimSpace(author.Email)
+		if email != "" {
+			authorsBuilder.WriteString(" (")
+			authorsBuilder.WriteString(email)
+			authorsBuilder.WriteString(") ")
+		}
+	}
+
+	authors := strings.TrimSpace(authorsBuilder.String())
+	if authors != "" {
+		podcast.Metadata = append(podcast.Metadata, Metadata{"Authors", authors})
 	}
 
 	// We don't present categories. They're for search engines to look at, not for
