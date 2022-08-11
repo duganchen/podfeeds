@@ -332,7 +332,7 @@ func SetupWatcher(cache PageCache, watcher *fsnotify.Watcher) {
 				if !ok {
 					return
 				}
-				if event.Op&fsnotify.Write == fsnotify.Write {
+				if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Chmod == fsnotify.Chmod {
 					go CachePodcasts(cache)
 				}
 			case err := <-watcher.Errors:

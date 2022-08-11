@@ -84,5 +84,4 @@ Or press "d" to download them or whatever; Lynx is very powerful.
 
 ## Troubleshooting
 
-If you need to rebuild Podfeeds' internal page cache, then shut it down, delete cache.sqlite3,
-and restart it.
+There are two ways to rebuild Podfeed's internal page cache, should that become necessary. Write to or "touch" podcasts.yaml. Or shut it down, delete cache.sqlite3, and restart it.
