@@ -30,7 +30,7 @@ Put the following in the EXTERNAL section of lynx.cfg:
 
     EXTERNAL:https:pod_dl %s:TRUE
 
-Credit to [podtools](https://github.com/lpar/podtools) for the special handling needed for Podtrac links.
+My apologies for breaking Podtrac, but I couldn't figure out any other way to get their downloads to work with CLI downloaders.
 
 ## Gathering Feed URLs
 
