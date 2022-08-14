@@ -1,12 +1,10 @@
 # podfeeds
 
-This is an HTTP server-based podcast aggregator. Just as other aggregators use Chrome to present a GUI, this one uses Lynx
-to present a TUI.
+This is an HTTP server-based podcast aggregator. Just as other aggregators use Chrome to present a GUI, this one uses Lynx to present a TUI.
 
 ## Setting Up Lynx
 
-Set Lynx up to open media files in your favorite media player. For example, I have the following ~/.mailcap to get Lynx to
-open them in mpv:
+Set Lynx up to open media files in your favorite media player. For example, I have the following ~/.mailcap to get Lynx to open them in [mpv](https://mpv.io/):
 
     audio/*; mpv %s
     video/*; mpv %s
@@ -18,12 +16,21 @@ Setting Lynx to always accept cookies will also save a few manual steps. Set the
     SET_COOKIES:TRUE
     ACCEPT_ALL_COOKIES:TRUE
 
-I like to set Lynx to use BASH-like keybindings (in the options menu you get with "o"). If a download URL has GET
-parameters, it makes it easier to delete them from the filename (press Ctrl-A to go to the beginning of the
-line, cursor to the question mark, Ctrl+K to delete to the end of the line).
-
 Remember that Lynx caches everything. If you want to check for updates, you need to refresh manually
 (Ctrl+R, or by following links with "x").
+
+### Downloding Podcasts
+
+Install [HTTPie](https://httpie.io/) and put the following **pod_dl** script somewhere in your PATH:
+
+    #!/usr/bin/env bash
+    http -d "$(echo "$1" | sed 's/dts\.podtrac\.com\/.+\/e\///g')"
+
+Put the following in the EXTERNAL section of lynx.cfg:
+
+    EXTERNAL:https:pod_dl %s:TRUE
+
+Credit to [podtools](https://github.com/lpar/podtools) for the special handling needed for Podtrac links.
 
 ## Gathering Feed URLs
 
@@ -80,7 +87,7 @@ Follow "Enclosure" links to play them.
 
 ![Playing](images/playing.png)
 
-Or press "d" to download them or whatever; Lynx is very powerful.
+Or press "." to download them with your pod_dl script.
 
 ## Troubleshooting
 
