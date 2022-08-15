@@ -21,16 +21,9 @@ Remember that Lynx caches everything. If you want to check for updates, you need
 
 ### Downloding Podcasts
 
-Install [HTTPie](https://httpie.io/) and put the following **pod_dl** script somewhere in your PATH:
+Install [HTTPie](https://httpie.io/) and put the following in the EXTERNAL section of lynx.cfg:
 
-    #!/usr/bin/env bash
-    http -d "$(echo "$1" | sed 's/dts\.podtrac\.com\/.+\/e\///g')"
-
-Put the following in the EXTERNAL section of lynx.cfg:
-
-    EXTERNAL:https:pod_dl %s:TRUE
-
-My apologies for bypassing Podtrac, but I couldn't figure out any other way to get their downloads to work with CLI downloaders.
+    EXTERNAL:https:http -d %s:TRUE
 
 ## Gathering Feed URLs
 
