@@ -16,9 +16,6 @@ Setting Lynx to always accept cookies will also save a few manual steps. Set the
     SET_COOKIES:TRUE
     ACCEPT_ALL_COOKIES:TRUE
 
-Remember that Lynx caches everything. If you want to check for updates, you need to refresh manually
-(Ctrl+R, or by following links with "x").
-
 ### Downloding Podcasts
 
 Install [HTTPie](https://httpie.io/) and put the following in the EXTERNAL section of lynx.cfg:
@@ -81,6 +78,9 @@ Follow "Enclosure" links to play them.
 ![Playing](images/playing.png)
 
 Or press "." to download them with your pod_dl script.
+
+To check a feed for updates, use Lynx's refresh keys (Ctrl+R, or by following links with "x"). Please note that on most graphical browsers,
+the equivalent to these Lynx hotkeys is Ctrl+F5. 
 
 ## Troubleshooting
 
