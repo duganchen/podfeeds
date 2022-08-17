@@ -471,6 +471,16 @@ func main() {
 			return
 		}
 
+		cacheControl := r.Header["Cache-Control"]
+		fmt.Println(cacheControl)
+		if len(cacheControl) == 0 || cacheControl[0] != "no-cache" {
+			err = WriteResponse(w, page.HTML, r)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+
 		var client http.Client
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
