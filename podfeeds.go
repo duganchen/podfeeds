@@ -472,7 +472,6 @@ func main() {
 		}
 
 		cacheControl := r.Header["Cache-Control"]
-		fmt.Println(cacheControl)
 		if len(cacheControl) == 0 || cacheControl[0] != "no-cache" {
 			err = WriteResponse(w, page.HTML, r)
 			if err != nil {
