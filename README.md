@@ -59,7 +59,7 @@ Load the server's index page in Lynx:
 
 Podfeeds is structured as an old-fashioned, Lynx-friendly website. There's a landing page at "/" with a link for each subscription.
 Each of those links goes to a page. That page is an HTML rendering of the podcast's XML file, with a table of contents
-at the top. Each entry at the table of contents is an episode.
+at the top. Each entry in the table of contents is an episode.
 
 You start on the list of podcasts you're subscribed to.
 
@@ -77,7 +77,7 @@ Follow "Enclosure" links to play them.
 
 ![Playing](images/playing.png)
 
-Or press "." to download them with your pod_dl script.
+Or press "." to download them with HTTPie.
 
 To check a feed for updates, use Lynx's refresh keys (Ctrl+R, or by following links with "x"). Please note that on most graphical browsers,
 the equivalent to these Lynx hotkeys is Ctrl+F5. 
