@@ -1,5 +1,7 @@
 # podfeeds
 
+![demo](images/usage.gif)
+
 This is an HTTP server-based podcast aggregator. Just as other aggregators use Chrome to present a GUI, this one uses Lynx to present a TUI.
 
 ## Setting Up Lynx
