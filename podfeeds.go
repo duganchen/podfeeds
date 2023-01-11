@@ -385,59 +385,59 @@ func main() {
 			err = WriteResponse(w, page.HTML, r)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
 			}
-		}
-
-		var client http.Client
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// Chrome sends both if it can.
-
-		if page.ETag != "" {
-			req.Header.Add("If-None-Match", page.ETag)
-		}
-
-		if page.LastModified != "" {
-			req.Header.Add("If-Modified-Since", page.LastModified)
-		}
-		resp, err := client.Do(req)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if resp.StatusCode != http.StatusNotModified {
-			err = cache.Erase(url)
+		} else {
+			var client http.Client
+			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			fetchedInfo, err := FetchPage(url)
+			// Chrome sends both if it can.
+
+			if page.ETag != "" {
+				req.Header.Add("If-None-Match", page.ETag)
+			}
+
+			if page.LastModified != "" {
+				req.Header.Add("If-Modified-Since", page.LastModified)
+			}
+			resp, err := client.Do(req)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			page = Page{fetchedInfo.Page.ETag, fetchedInfo.Page.LastModified, fetchedInfo.Page.HTML}
-			err = cache.Set(url, page)
+			if resp.StatusCode != http.StatusNotModified {
+				err = cache.Erase(url)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
 
+				fetchedInfo, err := FetchPage(url)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				page = Page{fetchedInfo.Page.ETag, fetchedInfo.Page.LastModified, fetchedInfo.Page.HTML}
+				err = cache.Set(url, page)
+
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+			}
+
+			err = WriteResponse(w, page.HTML, r)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 		}
 
-		err = WriteResponse(w, page.HTML, r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
 	})
 
 	port, set := os.LookupEnv("PORT")
@@ -457,12 +457,12 @@ func main() {
 			panic(err)
 		}
 		port := l.Addr().(*net.TCPAddr).Port
-		fmt.Printf("Using port: %d", port)
+		fmt.Printf("Using port: %d\n", port)
 		if err := http.Serve(l, nil); err != nil {
 			panic(err)
 		}
 	} else {
-		fmt.Print("Using port: 8080")
+		fmt.Println("Using port: 8080")
 		log.Fatal(http.ListenAndServe(port, nil))
 	}
 }
