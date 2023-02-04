@@ -81,8 +81,7 @@ Follow "Enclosure" links to play them.
 
 Or press "." to download them with HTTPie.
 
-To check a feed for updates, use Lynx's refresh keys (Ctrl+R, or by following links with "x"). Please note that on most graphical browsers,
-the equivalent to these Lynx hotkeys is Ctrl+F5. 
+To check a feed for updates, use Lynx's refresh keys (Ctrl+R, or by following links with "x").
 
 ## Troubleshooting
 
