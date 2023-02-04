@@ -74,6 +74,25 @@ func init() {
 	podcastTemplate = template.Must(template.ParseFiles("./templates/podcast.html"))
 }
 
+func FetchSubscription(feed string) (Subscription, error) {
+	// We have the URL. We just need the title.
+
+	resp, err := http.Get(feed)
+	if err != nil {
+		return Subscription{}, err
+	}
+
+	fp := gofeed.NewParser()
+
+	parsed, err := fp.Parse(resp.Body)
+	if err != nil {
+		return Subscription{}, err
+	}
+
+	return Subscription{parsed.Title, "/podcast?url=" + url.QueryEscape(feed)}, nil
+
+}
+
 func FetchPage(feed string) (FetchedInfo, error) {
 	resp, err := http.Get(feed)
 	if err != nil {
@@ -198,6 +217,16 @@ func FetchPageAsync(feed string, feedIndexes map[string]int, mutex *sync.Mutex, 
 	}
 }
 
+func FetchSubscriptionAsync(feed string, feedIndexes map[string]int, mutex *sync.Mutex, Subscriptions []Subscription) func() error {
+	return func() error {
+		subscription, err := FetchSubscription(feed)
+		mutex.Lock()
+		Subscriptions[feedIndexes[feed]] = subscription
+		mutex.Unlock()
+		return err
+	}
+}
+
 func WriteResponse(w http.ResponseWriter, body []byte, r *http.Request) error {
 	encodings := r.Header["Accept-Encoding"]
 	compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
@@ -241,7 +270,7 @@ func SetupWatcher(cache PageCache, watcher *fsnotify.Watcher) {
 					return
 				}
 				if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Chmod == fsnotify.Chmod {
-					go CachePodcasts(cache)
+					go CacheSubscriptions(cache)
 				}
 			case err := <-watcher.Errors:
 				if err != nil {
@@ -330,6 +359,71 @@ func CachePodcasts(cache PageCache) {
 	podcastCachingChannel <- 1
 }
 
+func CacheSubscriptions(cache PageCache) {
+	// Note that errors thrown here crash the server.
+
+	<-podcastCachingChannel
+	feeds := make([]string, 0)
+
+	buf, err := ioutil.ReadFile("./podcasts.yaml")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = yaml.Unmarshal(buf, &feeds)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Used to reassemble the podcasts in their original order
+	indexes := make(map[string]int)
+	for i, feed := range feeds {
+		// Seriously, just don't let the user enter duplicate feeds.
+		if indexes[feed] > 0 {
+			log.Fatal("Duplicate feed")
+		}
+		indexes[feed] = i
+	}
+
+	cache.Clear()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var mutex sync.Mutex
+	subscriptions := make([]Subscription, len(feeds))
+	g := new(errgroup.Group)
+	for _, feed := range feeds {
+		g.Go(FetchSubscriptionAsync(feed, indexes, &mutex, subscriptions))
+	}
+
+	err = g.Wait()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	buff := new(bytes.Buffer)
+	writer := gzip.NewWriter(buff)
+	indexTemplate.Execute(writer, subscriptions)
+	writer.Close()
+
+	stat, err := os.Stat("./podcasts.yaml")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var index Page
+	index.ETag = ""
+	index.LastModified = stat.ModTime().Format(http.TimeFormat)
+	index.HTML = buff.Bytes()
+
+	err = cache.Set("/", index)
+	if err != nil {
+		log.Fatal(err)
+	}
+	podcastCachingChannel <- 1
+}
+
 func main() {
 	cache, err := NewSQLiteCache()
 	if err != nil {
@@ -339,7 +433,7 @@ func main() {
 
 	// Build the page cache when we start. If necessary.
 	podcastCachingChannel <- 1
-	go CachePodcasts(cache)
+	go CacheSubscriptions(cache)
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -458,10 +552,6 @@ func main() {
 		err = podcastTemplate.Execute(&pageBuilder, podcast)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-
-		for name, value := range resp.Header {
-			fmt.Println(name, value)
 		}
 
 		// Pass the upstream caching headers to the browser. This should be enough for speed optimization.
