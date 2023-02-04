@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
-	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -370,66 +369,36 @@ func main() {
 			return
 		}
 
-		page, err := cache.Get(url)
-		if err == sql.ErrNoRows {
-			http.Error(w, "Podcast URL not found", http.StatusNotFound)
-			return
-		}
+		var client http.Client
+		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		cacheControl := r.Header["Cache-Control"]
-		if len(cacheControl) == 0 || cacheControl[0] != "no-cache" {
-			err = WriteResponse(w, page.HTML, r)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-		} else {
-			var client http.Client
-			req, err := http.NewRequest("GET", url, nil)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+		// So what do we need to pass on:
+		// Just Cache-Control, Expiry, ETag and Last-Modified?
 
-			// Chrome sends both if it can.
+		resp, err := client.Do(req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-			if page.ETag != "" {
-				req.Header.Add("If-None-Match", page.ETag)
-			}
-
-			if page.LastModified != "" {
-				req.Header.Add("If-Modified-Since", page.LastModified)
-			}
-			resp, err := client.Do(req)
+		if resp.StatusCode != http.StatusNotModified {
+			err = cache.Erase(url)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			if resp.StatusCode != http.StatusNotModified {
-				err = cache.Erase(url)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-
-				fetchedInfo, err := FetchPage(url)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-
-				page = Page{fetchedInfo.Page.ETag, fetchedInfo.Page.LastModified, fetchedInfo.Page.HTML}
-				err = cache.Set(url, page)
-
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
+			fetchedInfo, err := FetchPage(url)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
+
+			page := Page{fetchedInfo.Page.ETag, fetchedInfo.Page.LastModified, fetchedInfo.Page.HTML}
 
 			err = WriteResponse(w, page.HTML, r)
 			if err != nil {
@@ -437,7 +406,6 @@ func main() {
 				return
 			}
 		}
-
 	})
 
 	port, set := os.LookupEnv("PORT")
