@@ -252,8 +252,6 @@ func main() {
 	})
 
 	http.HandleFunc("/podcast", func(w http.ResponseWriter, r *http.Request) {
-		// TODO: A lot of this is extracted from FetchPage and WriteResponse and they can all be refactored out.
-		// Previous revisions would mainain these in a cache and the code to support that can be refactored out.
 
 		url := r.URL.Query().Get("url")
 
@@ -267,6 +265,13 @@ func main() {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		for _, reqCacheHeader := range []string{"cache-control", "if-modified-since", "if-none-match", "if-match"} {
+			reqHeader := r.Header.Get(reqCacheHeader)
+			if reqHeader != "" {
+				r.Header.Set(reqCacheHeader, reqHeader)
+			}
 		}
 
 		resp, err := client.Do(req)
