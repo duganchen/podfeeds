@@ -348,6 +348,9 @@ func main() {
 	go SetupWatcher(cache, watcher)
 	defer watcher.Close()
 
+	// Why not just have a global parser
+	g_fp := gofeed.NewParser()
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		page, err := cache.Get("/")
 		if err != nil {
@@ -376,36 +379,106 @@ func main() {
 			return
 		}
 
-		// So what do we need to pass on:
-		// Just Cache-Control, Expiry, ETag and Last-Modified?
-
 		resp, err := client.Do(req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		if resp.StatusCode != http.StatusNotModified {
-			err = cache.Erase(url)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+		// Let's expand these functions.
 
+		// Why the hell are we fetching it twice
+		/*
 			fetchedInfo, err := FetchPage(url)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+		*/
 
-			page := Page{fetchedInfo.Page.ETag, fetchedInfo.Page.LastModified, fetchedInfo.Page.HTML}
+		parsed, err := g_fp.Parse(resp.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 
-			err = WriteResponse(w, page.HTML, r)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
+		// This code extracted from FetchPage should all be correct?
+
+		var podcast Podcast
+		podcast.Language = parsed.Language
+
+		podcast.Title = parsed.Title
+		podcast.Description = parsed.Description
+
+		for _, parsedItem := range parsed.Items {
+			var item Item
+			item.Description = parsedItem.Description
+			item.Title = parsedItem.Title
+
+			item.GUID = parsedItem.GUID
+
+			podcast.ToC = append(podcast.ToC, ToCEntry{item.GUID, item.Title})
+
+			for _, enclosure := range parsedItem.Enclosures {
+				item.Enclosures = append(item.Enclosures, Enclosure{enclosure.URL, enclosure.Type})
+			}
+
+			if parsedItem.Updated != "" {
+				item.Metadata = append(item.Metadata, Metadata{"Updated", parsedItem.Updated})
+			}
+
+			if parsedItem.Published != "" {
+				item.Metadata = append(item.Metadata, Metadata{"Published", parsedItem.Published})
+			}
+
+			// Skipping "Content". In the feed where I saw it, it has the same content as the
+			// description.
+
+			if len(parsedItem.Authors) > 0 {
+				var authorsBuilder strings.Builder
+				for _, author := range parsedItem.Authors {
+					if author.Name != "" {
+						authorsBuilder.WriteString(author.Name)
+					}
+
+					if author.Name != "" && author.Email != "" {
+						authorsBuilder.WriteString(" (")
+					}
+
+					if author.Email != "" {
+						authorsBuilder.WriteString(author.Email)
+					}
+
+					if author.Name != "" && author.Email != "" {
+						authorsBuilder.WriteString(")")
+					}
+
+					authorsBuilder.WriteString(" ")
+				}
+				item.Metadata = append(item.Metadata, Metadata{"Authors", authorsBuilder.String()})
+			}
+
+			podcast.Items = append(podcast.Items, item)
+		}
+
+		if len(podcast.ToC) == 1 {
+			podcast.ToC = nil
+		}
+
+		var pageBuilder bytes.Buffer
+		err = podcastTemplate.Execute(&pageBuilder, podcast)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+
+		// Pass the upstream caching headers to the browser. This should be enough for speed optimizatin.
+		for _, header := range []string{"ETag", "Last-Modified", "Cache-Control", "Expires"} {
+			respHeader, ok := resp.Header[header]
+			if ok {
+				w.Header().Set(header, strings.Join(respHeader, " "))
 			}
 		}
+
+		w.Write(pageBuilder.Bytes())
 	})
 
 	port, set := os.LookupEnv("PORT")
