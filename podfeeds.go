@@ -365,6 +365,9 @@ func main() {
 	})
 
 	http.HandleFunc("/podcast", func(w http.ResponseWriter, r *http.Request) {
+		// TODO: A lot of this is extracted from FetchPage and WriteResponse and they can all be refactored out.
+		// Previous revisions would mainain these in a cache and the code to support that can be refactored out.
+
 		url := r.URL.Query().Get("url")
 
 		if url == "" {
@@ -385,23 +388,10 @@ func main() {
 			return
 		}
 
-		// Let's expand these functions.
-
-		// Why the hell are we fetching it twice
-		/*
-			fetchedInfo, err := FetchPage(url)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		*/
-
 		parsed, err := g_fp.Parse(resp.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-
-		// This code extracted from FetchPage should all be correct?
 
 		var podcast Podcast
 		podcast.Language = parsed.Language
@@ -470,11 +460,15 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 
-		// Pass the upstream caching headers to the browser. This should be enough for speed optimizatin.
-		for _, header := range []string{"ETag", "Last-Modified", "Cache-Control", "Expires"} {
-			respHeader, ok := resp.Header[header]
-			if ok {
-				w.Header().Set(header, strings.Join(respHeader, " "))
+		for name, value := range resp.Header {
+			fmt.Println(name, value)
+		}
+
+		// Pass the upstream caching headers to the browser. This should be enough for speed optimization.
+		for _, header := range []string{"Etag", "Last-Modified", "Cache-Control", "Expires"} {
+			respHeader := resp.Header.Get(header)
+			if respHeader != "" {
+				w.Header().Set(header, respHeader)
 			}
 		}
 
