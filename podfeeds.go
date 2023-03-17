@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"compress/gzip"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -84,6 +83,7 @@ func FetchSubscription(feed string) (Subscription, error) {
 		return Subscription{}, err
 	}
 
+	fmt.Println("Loaded", feed)
 	return Subscription{parsed.Title, "/podcast?url=" + url.QueryEscape(feed)}, nil
 
 }
@@ -98,41 +98,11 @@ func FetchSubscriptionAsync(feed string, feedIndexes map[string]int, mutex *sync
 	}
 }
 
-func WriteResponse(w http.ResponseWriter, body []byte, r *http.Request) error {
-	encodings := r.Header["Accept-Encoding"]
-	compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
-
-	if compress {
-		w.Header().Add("Content-Encoding", "gzip")
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write(body)
-	} else {
-		byteReader := bytes.NewReader(body)
-		reader, err := gzip.NewReader(byteReader)
-		if err != nil {
-			return err
-		}
-		defer reader.Close()
-		body, err := ioutil.ReadAll(reader)
-		if err != nil {
-			return err
-		}
-		w.Write(body)
-	}
-
-	return nil
-}
-
 // Only allow one podcasts-caching thread a a time
 var podcastCachingChannel = make(chan int, 1)
 
-func SetupWatcher(cache PageCache, watcher *fsnotify.Watcher) {
-	// The synchronization is: cache podcasts on program start, then set up a watcher
-	// to recache every time podcasts.yaml changes.
-
-	<-podcastCachingChannel
-	watcher.Add("podcasts.yaml")
-	podcastCachingChannel <- 1
+func SetupWatcher(watcher *fsnotify.Watcher) {
+	watcher.Add("./podcasts.yaml")
 	go func() {
 		for {
 			select {
@@ -141,7 +111,7 @@ func SetupWatcher(cache PageCache, watcher *fsnotify.Watcher) {
 					return
 				}
 				if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Chmod == fsnotify.Chmod {
-					go CacheSubscriptions(cache)
+					go CacheSubscriptions()
 				}
 			case err := <-watcher.Errors:
 				if err != nil {
@@ -152,7 +122,7 @@ func SetupWatcher(cache PageCache, watcher *fsnotify.Watcher) {
 	}()
 }
 
-func CacheSubscriptions(cache PageCache) {
+func CacheSubscriptions() {
 	// Note that errors thrown here crash the server.
 
 	<-podcastCachingChannel
@@ -178,11 +148,6 @@ func CacheSubscriptions(cache PageCache) {
 		indexes[feed] = i
 	}
 
-	cache.Clear()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	var mutex sync.Mutex
 	subscriptions := make([]Subscription, len(feeds))
 	g := new(errgroup.Group)
@@ -194,23 +159,12 @@ func CacheSubscriptions(cache PageCache) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println("Writing index.html")
 
 	buff := new(bytes.Buffer)
-	writer := gzip.NewWriter(buff)
-	indexTemplate.Execute(writer, subscriptions)
-	writer.Close()
+	indexTemplate.Execute(buff, subscriptions)
 
-	stat, err := os.Stat("./podcasts.yaml")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var index Page
-	index.ETag = ""
-	index.LastModified = stat.ModTime().Format(http.TimeFormat)
-	index.HTML = buff.Bytes()
-
-	err = cache.Set("/", index)
+	err = os.WriteFile("./index.html", buff.Bytes(), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -218,33 +172,28 @@ func CacheSubscriptions(cache PageCache) {
 }
 
 func main() {
-	cache, err := NewSQLiteCache()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer CloseSQLiteCache(cache)
-
-	// Build the page cache when we start. If necessary.
-	podcastCachingChannel <- 1
-	go CacheSubscriptions(cache)
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
 	}
-	go SetupWatcher(cache, watcher)
+	go SetupWatcher(watcher)
 	defer watcher.Close()
+
+	podcastCachingChannel <- 1
+	go CacheSubscriptions()
 
 	// Why not just have a global parser
 	g_fp := gofeed.NewParser()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		page, err := cache.Get("/")
+		page, err := os.ReadFile("./index.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		err = WriteResponse(w, page.HTML, r)
+
+		_, err = w.Write(page)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

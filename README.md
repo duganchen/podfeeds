@@ -71,7 +71,7 @@ Following each link gets you the page for that podcast. The page starts with anc
 
 ![As It Happens](images/toc.png)
 
-Use the table of contents to jump to episodes. Press Ctrl+A to jump back to the beginning of the page, where the table of contents is:
+Use the table of contents to jump to episodes. Press Ctrl+A to jump back to the beginning of the page, where the table of contents is.
 
 ![As It Happens](images/episode.png)
 
@@ -83,6 +83,7 @@ Or press "." to download them with HTTPie.
 
 To check a feed for updates, use Lynx's refresh keys (Ctrl+R, or by following links with "x").
 
-## Troubleshooting
+## Notes on Performance
 
-There are two ways to rebuild Podfeed's internal page cache, should that become necessary. Write to or "touch" podcasts.yaml. Or shut it down, delete cache.sqlite3, and restart it.
+Podfeeds is essentially a proxy that requests the RSS feed, transforms it into a single HTML file, and returns it. In almost all
+cases, it will be as fast as the server's ability to send it and Lynx's ability to render it.
