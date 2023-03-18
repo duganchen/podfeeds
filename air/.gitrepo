@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:markdowncss/air.git
+	branch = master
+	commit = f31f83d874e0597a6ca95084e147f088531170ec
+	parent = 1687521330b105bfae9ddbde21d0fe5c61bf1704
+	method = merge
+	cmdver = 0.4.5
