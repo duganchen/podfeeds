@@ -186,6 +186,8 @@ func main() {
 	// Why not just have a global parser
 	g_fp := gofeed.NewParser()
 
+	http.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("modest/css"))))
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		page, err := os.ReadFile("./index.html")
 		if err != nil {

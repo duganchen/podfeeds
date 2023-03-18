@@ -4,9 +4,9 @@
 ; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
 ;
 [subrepo]
-	remote = git@github.com:markdowncss/air.git
+	remote = git@github.com:markdowncss/modest.git
 	branch = master
-	commit = f31f83d874e0597a6ca95084e147f088531170ec
-	parent = 1687521330b105bfae9ddbde21d0fe5c61bf1704
+	commit = f16599c66745808b363f0797d4e89a7d3e7c6e73
+	parent = 708f1ec3ae1079f44aec5caec282eb92801c201e
 	method = merge
 	cmdver = 0.4.5

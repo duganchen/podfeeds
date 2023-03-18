@@ -1,28 +1,30 @@
 {
-  "name": "markdown-air",
-  "version": "0.0.4",
-  "description": "A markdown CSS theme.",
+  "name": "markdown-modest",
+  "version": "0.0.1",
+  "description": "A modest markdown CSS theme.",
   "main": "gulpfile.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/markdowncss/air.git"
+    "url": "https://github.com/markdowncss/modest.git"
   },
   "keywords": [
     "markdown",
     "css",
-    "air",
+    "modest",
     "theme"
   ],
   "author": "John Otander <johnotander@gmail.com> (http://johnotander.com/)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/markdowncss/air/issues"
+    "url": "https://github.com/markdowncss/modest/issues"
   },
-  "homepage": "https://github.com/markdowncss/air",
+  "homepage": "https://github.com/markdowncss/modest",
   "dependencies": {
+    "furtive-code": "0.0.1",
+    "furtive-links": "0.0.2",
     "furtive-print": "0.0.1",
     "furtive-responsive-utils": "0.0.1",
     "furtive-typescale": "0.0.4",

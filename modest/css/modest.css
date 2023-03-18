@@ -58,6 +58,32 @@
   }
 }
 
+pre,
+code {
+  font-family: Menlo, Monaco, "Courier New", monospace;
+}
+
+pre {
+  padding: .5rem;
+  line-height: 1.25;
+  overflow-x: scroll;
+}
+
+a,
+a:visited {
+  color: #3498db;
+}
+
+a:hover,
+a:focus,
+a:active {
+  color: #2980b9;
+}
+
+.modest-no-decoration {
+  text-decoration: none;
+}
+
 html {
   font-size: 12px;
 }
@@ -79,57 +105,57 @@ body {
 }
 
 p,
-.air-p {
+.modest-p {
   font-size: 1rem;
   margin-bottom: 1.3rem;
 }
 
 h1,
-.air-h1,
+.modest-h1,
 h2,
-.air-h2,
+.modest-h2,
 h3,
-.air-h3,
+.modest-h3,
 h4,
-.air-h4 {
+.modest-h4 {
   margin: 1.414rem 0 .5rem;
   font-weight: inherit;
   line-height: 1.42;
 }
 
 h1,
-.air-h1 {
+.modest-h1 {
   margin-top: 0;
   font-size: 3.998rem;
 }
 
 h2,
-.air-h2 {
+.modest-h2 {
   font-size: 2.827rem;
 }
 
 h3,
-.air-h3 {
+.modest-h3 {
   font-size: 1.999rem;
 }
 
 h4,
-.air-h4 {
+.modest-h4 {
   font-size: 1.414rem;
 }
 
 h5,
-.air-h5 {
+.modest-h5 {
   font-size: 1.121rem;
 }
 
 h6,
-.air-h6 {
+.modest-h6 {
   font-size: .88rem;
 }
 
 small,
-.air-small {
+.modest-small {
   font-size: .707em;
 }
 
@@ -145,55 +171,49 @@ textarea {
   max-width: 100%;
 }
 
-@import url(http://fonts.googleapis.com/css?family=Open+Sans:300italic,300);
+@import url(http://fonts.googleapis.com/css?family=Open+Sans+Condensed:300,300italic,700);
+
+@import url(http://fonts.googleapis.com/css?family=Arimo:700,700italic);
+
+html {
+  font-size: 18px;
+  max-width: 100%;
+}
 
 body {
   color: #444;
-  font-family: 'Open Sans', Helvetica, sans-serif;
+  font-family: 'Open Sans Condensed', sans-serif;
   font-weight: 300;
-  margin: 6rem auto 1rem;
+  margin: 0 auto;
   max-width: 48rem;
+  line-height: 1.45;
+  padding: .25rem;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: Arimo, Helvetica, sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  border-bottom: 2px solid #fafafa;
+  margin-bottom: 1.15rem;
+  padding-bottom: .5rem;
   text-align: center;
 }
 
-img {
-  border-radius: 50%;
-  height: 200px;
-  margin: 0 auto;
-  width: 200px;
-}
-
-a,
-a:visited {
-  color: #3498db;
-}
-
-a:hover,
-a:focus,
-a:active {
-  color: #2980b9;
-}
-
-pre {
-  background-color: #fafafa;
-  padding: 1rem;
-  text-align: left;
-}
-
 blockquote {
-  margin: 0;
-  border-left: 5px solid #7a7a7a;
-  font-style: italic;
-  padding: 1.33em;
-  text-align: left;
+  border-left: 8px solid #fafafa;
+  padding: 1rem;
 }
 
-ul,
-ol,
-li {
-  text-align: left;
-}
-
-p {
-  color: #777;
+pre,
+code {
+  background-color: #fafafa;
 }

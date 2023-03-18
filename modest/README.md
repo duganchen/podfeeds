@@ -1,13 +1,13 @@
-# Air
+# Modest
 
-A [markdown theme](https://markdowncss.github.io) that is light and airy.
+A [markdown theme](https://markdowncss.github.io) that is rather modest.
 
 ## Installation
 
 #### Through npm:
 
 ```
-npm install --save markdown-air
+npm install --save markdown-modest
 ```
 
 This theme integrates well with `rework-npm`, and has rework CSS available in the index.css file.
@@ -15,13 +15,13 @@ This theme integrates well with `rework-npm`, and has rework CSS available in th
 #### Clone the repo:
 
 ```
-git clone https://github.com/markdowncss/air.git
+git clone https://github.com/markdowncss/modest.git
 ```
 
 #### Development:
 
 ```
-git clone https://github.com/markdowncss/air.git && cd air
+git clone https://github.com/markdowncss/modest.git && cd modest
 npm install
 gulp
 ```
@@ -31,7 +31,7 @@ gulp
 Link the file in your Markdown to HTML build process:
 
 ```html
-<link rel="stylesheet" href="path/to/css/air.css">
+<link rel="stylesheet" href="path/to/css/modest.css">
 ```
 
 ## License

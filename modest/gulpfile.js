@@ -10,8 +10,8 @@ var gulp        = require('gulp'),
     md          = require('gulp-remarkable');
 
 gulp.task('md', function() {
-  return gulp.src('air.md')
-    .pipe(md())
+  return gulp.src('modest.md')
+    .pipe(md({ html: true }))
     .pipe(name('-markdown.html'))
     .pipe(gulp.dest('example'));
 });
@@ -24,9 +24,9 @@ gulp.task('html', ['md', 'css'], function() {
 
 gulp.task('css', function() {
   return gulp.src('index.css')
-    .pipe(rework(reworkNPM(), classPrefix('air-'), media(), reworkVars()))
+    .pipe(rework(reworkNPM(), classPrefix('modest-'), media(), reworkVars()))
     .pipe(size({ gzip: true, showFiles: true }))
-    .pipe(name('air.css'))
+    .pipe(name('modest.css'))
     .pipe(gulp.dest('css'));
 });
 
