@@ -18,7 +18,7 @@ Setting Lynx to always accept cookies will also save a few manual steps. Set the
     SET_COOKIES:TRUE
     ACCEPT_ALL_COOKIES:TRUE
 
-### Downloding Podcasts
+### Downloading Podcasts
 
 Install [HTTPie](https://httpie.io/) and put the following in the EXTERNAL section of lynx.cfg:
 
@@ -81,9 +81,11 @@ Follow "Enclosure" links to play them.
 
 Or press "." to download them with HTTPie.
 
-To check a feed for updates, use Lynx's refresh keys (Ctrl+R, or by following links with "x").
-
 ## Notes on Performance
 
 Podfeeds is essentially a proxy that requests the RSS feed, transforms it into a single HTML file, and returns it. In almost all
-cases, it will be as fast as the server's ability to send it and Lynx's ability to render it.
+cases, it will be as fast as the server's ability to send it, Podfeed's ability to transform it, and Lynx's ability to render it.
+
+Neither Lynx nor Podfeeds maintains a persistent cache. If you need one, here's one
+
+https://lists.gnu.org/archive/html/lynx-dev/2000-05/msg00519.html
