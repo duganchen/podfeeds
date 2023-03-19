@@ -189,17 +189,7 @@ func main() {
 	http.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("modest/css"))))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		page, err := os.ReadFile("./index.html")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		_, err = w.Write(page)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		http.ServeFile(w, r, "index.html")
 	})
 
 	http.HandleFunc("/podcast", func(w http.ResponseWriter, r *http.Request) {
