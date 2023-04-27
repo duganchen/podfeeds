@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -301,7 +302,14 @@ func main() {
 			}
 		}
 
-		w.Write(pageBuilder.Bytes())
+		// These responses can be large, and I'm finding that there can be a delay even when Squid has a
+		// cache hit. What if we gzip them?
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set("Content-Type", "text/html")
+		gw := gzip.NewWriter(w)
+		defer gw.Close()
+
+		gw.Write(pageBuilder.Bytes())
 	})
 
 	port, set := os.LookupEnv("PORT")
