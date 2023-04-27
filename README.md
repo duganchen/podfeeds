@@ -83,9 +83,9 @@ Or press "." to download them with HTTPie.
 
 ## Notes on Performance
 
-Podfeeds is essentially a proxy that requests the RSS feed, transforms it into a single HTML file, and returns it. In almost all
-cases, it will be as fast as the server's ability to send it, Podfeed's ability to transform it, and Lynx's ability to render it.
-
-Neither Lynx nor Podfeeds maintains a persistent cache. If you need one, here's one
+Honestly, put a caching proxy like Squid in front of it. This is the recommendation of both
+Lynx and w3m. See:
 
 https://lists.gnu.org/archive/html/lynx-dev/2000-05/msg00519.html
+
+https://w3m.sourceforge.net/FAQ#www
