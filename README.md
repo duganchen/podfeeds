@@ -80,12 +80,3 @@ Follow "Enclosure" links to play them.
 ![Playing](images/playing.png)
 
 Or press "." to download them with HTTPie.
-
-## Notes on Performance
-
-Honestly, put a caching proxy like Squid in front of it. This is the recommendation of both
-Lynx and w3m. See:
-
-https://lists.gnu.org/archive/html/lynx-dev/2000-05/msg00519.html
-
-https://w3m.sourceforge.net/FAQ#www
