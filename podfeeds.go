@@ -232,12 +232,9 @@ func main() {
 		oldCachedPage, ok := pageCache[r.URL.String()]
 		pageCacheMutex.Unlock()
 		if ok {
-			fmt.Println("Page found")
 			etag := r.Header.Get("If-None-Match")
-			fmt.Println("ETag specified is", etag)
 			if etag != "" && etag == oldCachedPage.ETag {
-				w.WriteHeader(http.StatusNotModified)
-				w.Header().Set("ETag", etag)
+				w.Header().Set("Etag", etag)
 
 				if oldCachedPage.CacheControl != "" {
 					w.Header().Set("Cache-Control", oldCachedPage.CacheControl)
@@ -258,8 +255,7 @@ func main() {
 				if oldCachedPage.Vary != "" {
 					w.Header().Set("Vary", oldCachedPage.Vary)
 				}
-
-				fmt.Println("That should be the page")
+				w.WriteHeader(http.StatusNotModified)
 				return
 			}
 		}
@@ -368,12 +364,9 @@ func main() {
 				w.Header().Set(header, respHeader)
 			}
 
-			fmt.Println(header, respHeader)
-
 			if header == "Etag" {
 				cache = true
 				newCachedPage.ETag = respHeader
-				fmt.Println("Caching page with etag", respHeader)
 			}
 
 			if header == "Last-Modified" {
@@ -406,7 +399,6 @@ func main() {
 		}
 
 		if cache {
-			fmt.Println("Putting page in cache")
 			pageCacheMutex.Lock()
 			pageCache[r.URL.String()] = newCachedPage
 			pageCacheMutex.Unlock()
