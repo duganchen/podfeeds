@@ -211,7 +211,6 @@ func main() {
 	pageCacheMutex := sync.Mutex{}
 
 	http.HandleFunc("/podcast", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("Requesting podcast")
 
 		url := r.URL.Query().Get("url")
 
@@ -226,12 +225,10 @@ func main() {
 		pageIsCached := false
 		if ok {
 			etag := r.Header.Get("If-None-Match")
-			fmt.Println("Requesting etag", etag)
 			if etag != "" && etag == oldCachedPage.ETag {
 				pageIsCached = true
 			} else {
 				requestedTime, err := http.ParseTime(r.Header.Get("If-Modified-Since"))
-				fmt.Println("Requesting time", requestedTime)
 				if err == nil {
 					cachedTime, err := http.ParseTime(oldCachedPage.LastModified)
 					if err == nil && cachedTime.Compare(requestedTime) == -1 {

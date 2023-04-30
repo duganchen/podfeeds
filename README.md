@@ -105,6 +105,8 @@ etag and last-modified headers from Podfeeds, and send it corresponding if-none-
 
                 proxy_pass http://localhost:8080;
 
+                proxy_cache_revalidate on;
+
             }
 
         }
