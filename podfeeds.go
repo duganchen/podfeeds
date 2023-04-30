@@ -172,6 +172,12 @@ func CacheSubscriptions() {
 	podcastCachingChannel <- 1
 }
 
+func serverSideCache(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handler.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 
 	watcher, err := fsnotify.NewWatcher()
