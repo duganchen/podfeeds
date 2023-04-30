@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"text/template"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	_ "github.com/mattn/go-sqlite3"
@@ -59,6 +60,12 @@ type Podcast struct {
 	ToC []ToCEntry
 }
 
+type CachedPage struct {
+	LastModified time.Time
+	ETag         string
+	Body         string
+}
+
 var (
 	indexTemplate   *template.Template
 	podcastTemplate *template.Template
@@ -68,6 +75,9 @@ func init() {
 	indexTemplate = template.Must(template.ParseFiles("./templates/index.html"))
 	podcastTemplate = template.Must(template.ParseFiles("./templates/podcast.html"))
 }
+
+// URL to cached page
+var pageCache = make(map[string]CachedPage)
 
 func FetchSubscription(feed string) (Subscription, error) {
 	// We have the URL. We just need the title.
@@ -172,6 +182,8 @@ func CacheSubscriptions() {
 	podcastCachingChannel <- 1
 }
 
+// Going by this:
+// https://dev.to/theghostmac/understanding-and-crafting-http-middlewares-in-go-3183
 func serverSideCache(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handler.ServeHTTP(w, r)
