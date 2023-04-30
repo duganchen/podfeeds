@@ -118,7 +118,14 @@ func FetchSubscriptionAsync(feed string, feedIndexes map[string]int, mutex *sync
 var podcastCachingChannel = make(chan int, 1)
 
 func SetupWatcher(watcher *fsnotify.Watcher) {
-	watcher.Add("./podcasts.yaml")
+
+	podcasts := "./podcasts.yaml"
+	_, err := os.Stat(podcasts)
+	if err != nil {
+		podcasts = "/etc/podfeeds/podcasts.yaml"
+	}
+	watcher.Add(podcasts)
+
 	go func() {
 		for {
 			select {
@@ -144,7 +151,13 @@ func CacheSubscriptions() {
 	<-podcastCachingChannel
 	feeds := make([]string, 0)
 
-	buf, err := ioutil.ReadFile("./podcasts.yaml")
+	podcasts := "./podcasts.yaml"
+	_, err := os.Stat(podcasts)
+	if err != nil {
+		podcasts = "/etc/podfeeds/podcasts.yaml"
+	}
+
+	buf, err := ioutil.ReadFile(podcasts)
 	if err != nil {
 		log.Fatal(err)
 	}
