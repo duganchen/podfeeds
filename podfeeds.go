@@ -259,15 +259,6 @@ func main() {
 			return
 		}
 
-		/*
-			for _, reqCacheHeader := range []string{"cache-control", "if-modified-since", "if-none-match", "if-match"} {
-				reqHeader := r.Header.Get(reqCacheHeader)
-				if reqHeader != "" {
-					r.Header.Set(reqCacheHeader, reqHeader)
-				}
-			}
-		*/
-
 		resp, err := client.Do(req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
