@@ -63,7 +63,7 @@ type Podcast struct {
 type CachedPage struct {
 	LastModified time.Time
 	ETag         string
-	Body         string
+	Body         []byte
 }
 
 var (
