@@ -188,14 +188,6 @@ func CacheSubscriptions() {
 	podcastCachingChannel <- 1
 }
 
-// Going by this:
-// https://dev.to/theghostmac/understanding-and-crafting-http-middlewares-in-go-3183
-func serverSideCache(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handler.ServeHTTP(w, r)
-	})
-}
-
 func main() {
 
 	watcher, err := fsnotify.NewWatcher()
@@ -219,7 +211,7 @@ func main() {
 
 	pageCacheMutex := sync.Mutex{}
 
-	http.Handle("/podcast", serverSideCache(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/podcast", func(w http.ResponseWriter, r *http.Request) {
 
 		url := r.URL.Query().Get("url")
 
@@ -416,7 +408,7 @@ func main() {
 
 			gw.Write(pageBuilder.Bytes())
 		*/
-	})))
+	})
 
 	port, set := os.LookupEnv("PORT")
 
