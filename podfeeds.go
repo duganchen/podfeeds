@@ -188,12 +188,12 @@ func CacheSubscriptions() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Writing index.html")
+	fmt.Println("Writing /tmp/podfeeds/index.html")
 
 	buff := new(bytes.Buffer)
 	indexTemplate.Execute(buff, subscriptions)
 
-	err = os.WriteFile("./index.html", buff.Bytes(), 0644)
+	err = os.WriteFile("/tmp/podfeeds/index.html", buff.Bytes(), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -201,6 +201,11 @@ func CacheSubscriptions() {
 }
 
 func main() {
+
+	_, err := os.Stat("/tmp/podfeeds")
+	if err != nil {
+		os.MkdirAll("/tmp/podfeeds", os.ModePerm)
+	}
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -218,7 +223,7 @@ func main() {
 	http.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("modest/css"))))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "index.html")
+		http.ServeFile(w, r, "/tmp/podfeeds/index.html")
 	})
 
 	pageCacheMutex := sync.Mutex{}
