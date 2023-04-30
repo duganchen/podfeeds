@@ -199,7 +199,7 @@ func main() {
 		http.ServeFile(w, r, "index.html")
 	})
 
-	http.HandleFunc("/podcast", func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/podcast", serverSideCache(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		url := r.URL.Query().Get("url")
 
@@ -316,7 +316,7 @@ func main() {
 		defer gw.Close()
 
 		gw.Write(pageBuilder.Bytes())
-	})
+	})))
 
 	port, set := os.LookupEnv("PORT")
 
