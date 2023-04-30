@@ -210,6 +210,8 @@ func main() {
 		http.ServeFile(w, r, "index.html")
 	})
 
+	pageCacheMutex := sync.Mutex{}
+
 	http.Handle("/podcast", serverSideCache(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		url := r.URL.Query().Get("url")
@@ -336,7 +338,9 @@ func main() {
 
 		if cache {
 			cachedPage.Body = pageBuilder.Bytes()
+			pageCacheMutex.Lock()
 			pageCache[r.URL.String()] = cachedPage
+			pageCacheMutex.Unlock()
 		}
 
 		w.Write(pageBuilder.Bytes())
