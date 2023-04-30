@@ -83,9 +83,8 @@ Or press "." to download them with HTTPie.
 
 ## Notes on Performance
 
-Consider putting a caching proxy in front of Podfeeds. Any that properly handles
-etag, last-modified, if-none-match and if-modified headers would do. The following
-nginx.conf is a working example:
+Consider putting a caching proxy in front of Podfeeds. The proxy would need to receive
+etag and last-modified headers from Podfeeds, and send it corresponding if-none-match and if-modified headers. The following nginx.conf (which is a reverse proxy that would listen at port 8081 and forward to Podfeeds at http://localhost:8080) is a working example:
 
     events {
         worker_connections 1024;
