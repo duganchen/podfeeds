@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"compress/gzip"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -312,22 +311,46 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 
+		cache := false
+		cachedPage := CachedPage{}
 		// Pass the upstream caching headers to the browser. This should be enough for speed optimization.
 		for _, header := range []string{"Etag", "Last-Modified", "Cache-Control", "Expires"} {
 			respHeader := resp.Header.Get(header)
 			if respHeader != "" {
 				w.Header().Set(header, respHeader)
 			}
+
+			if header == "ETag" {
+				cache = true
+				cachedPage.ETag = respHeader
+			}
+
+			if header == "Last-Modified" {
+				cache = true
+				lastModified, err := http.ParseTime(respHeader)
+				if err == nil {
+					cachedPage.LastModified = lastModified
+				}
+			}
 		}
 
-		// These responses can be large, and I'm finding that there can be a delay even when Squid has a
-		// cache hit. What if we gzip them?
-		w.Header().Set("Content-Encoding", "gzip")
-		w.Header().Set("Content-Type", "text/html")
-		gw := gzip.NewWriter(w)
-		defer gw.Close()
+		if cache {
+			cachedPage.Body = pageBuilder.Bytes()
+			pageCache[r.URL.String()] = cachedPage
+		}
 
-		gw.Write(pageBuilder.Bytes())
+		w.Write(pageBuilder.Bytes())
+
+		/*
+			// These responses can be large, and I'm finding that there can be a delay even when Squid has a
+			// cache hit. What if we gzip them?
+			w.Header().Set("Content-Encoding", "gzip")
+			w.Header().Set("Content-Type", "text/html")
+			gw := gzip.NewWriter(w)
+			defer gw.Close()
+
+			gw.Write(pageBuilder.Bytes())
+		*/
 	})))
 
 	port, set := os.LookupEnv("PORT")
