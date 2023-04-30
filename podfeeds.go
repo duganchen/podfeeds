@@ -12,7 +12,6 @@ import (
 	"strings"
 	"sync"
 	"text/template"
-	"time"
 
 	"github.com/fsnotify/fsnotify"
 	_ "github.com/mattn/go-sqlite3"
@@ -60,7 +59,7 @@ type Podcast struct {
 }
 
 type CachedPage struct {
-	LastModified time.Time
+	LastModified string
 	ETag         string
 
 	// List from here.
@@ -223,9 +222,22 @@ func main() {
 		pageCacheMutex.Lock()
 		oldCachedPage, ok := pageCache[r.URL.String()]
 		pageCacheMutex.Unlock()
+		pageIsCached := false
 		if ok {
 			etag := r.Header.Get("If-None-Match")
 			if etag != "" && etag == oldCachedPage.ETag {
+				pageIsCached = true
+			}
+
+			requestedTime, err := http.ParseTime(r.Header.Get("If-Modified-Since"))
+			if err == nil {
+				cachedTime, err := http.ParseTime(oldCachedPage.LastModified)
+				if err == nil && cachedTime.Compare(requestedTime) == -1 {
+					pageIsCached = true
+				}
+			}
+
+			if pageIsCached {
 				w.Header().Set("Etag", etag)
 
 				if oldCachedPage.CacheControl != "" {
@@ -246,6 +258,10 @@ func main() {
 
 				if oldCachedPage.Vary != "" {
 					w.Header().Set("Vary", oldCachedPage.Vary)
+				}
+
+				if oldCachedPage.LastModified != "" {
+					w.Header().Set("LastModified", oldCachedPage.LastModified)
 				}
 				w.WriteHeader(http.StatusNotModified)
 				return
@@ -354,10 +370,7 @@ func main() {
 
 			if header == "Last-Modified" {
 				cache = true
-				lastModified, err := http.ParseTime(respHeader)
-				if err == nil {
-					newCachedPage.LastModified = lastModified
-				}
+				newCachedPage.LastModified = respHeader
 			}
 
 			if header == "Cache-Control" {
