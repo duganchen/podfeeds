@@ -80,3 +80,33 @@ Follow "Enclosure" links to play them.
 ![Playing](images/playing.png)
 
 Or press "." to download them with HTTPie.
+
+## Notes on Performance
+
+Consider putting a caching proxy in front of Podfeeds. Any that properly handles
+etag, last-modified, if-none-match and if-modified headers would do. The following
+nginx.conf is a working example:
+
+    events {
+        worker_connections 1024;
+    }
+    http {
+
+        proxy_cache_path /usr/local/var/cache/nginx keys_zone=podfeeds:10m;
+
+        server {
+
+            listen 8081;
+
+            proxy_cache podfeeds;
+
+            location / {
+
+                resolver 8.8.8.8;
+
+                proxy_pass http://localhost:8080;
+
+            }
+
+        }
+    }
