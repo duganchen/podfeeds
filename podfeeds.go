@@ -62,7 +62,14 @@ type Podcast struct {
 type CachedPage struct {
 	LastModified time.Time
 	ETag         string
-	Body         []byte
+
+	// List from here.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match
+	CacheControl    string
+	ContentLocation string
+	Date            string
+	Expires         string
+	Vary            string
 }
 
 var (
@@ -221,6 +228,42 @@ func main() {
 			return
 		}
 
+		pageCacheMutex.Lock()
+		oldCachedPage, ok := pageCache[r.URL.String()]
+		pageCacheMutex.Unlock()
+		if ok {
+			fmt.Println("Page found")
+			etag := r.Header.Get("If-None-Match")
+			fmt.Println("ETag specified is", etag)
+			if etag != "" && etag == oldCachedPage.ETag {
+				w.WriteHeader(http.StatusNotModified)
+				w.Header().Set("ETag", etag)
+
+				if oldCachedPage.CacheControl != "" {
+					w.Header().Set("Cache-Control", oldCachedPage.CacheControl)
+				}
+
+				if oldCachedPage.ContentLocation != "" {
+					w.Header().Set("Content-Location", oldCachedPage.ContentLocation)
+				}
+
+				if oldCachedPage.Date != "" {
+					w.Header().Set("Date", oldCachedPage.Date)
+				}
+
+				if oldCachedPage.Expires != "" {
+					w.Header().Set("Expires", oldCachedPage.Expires)
+				}
+
+				if oldCachedPage.Vary != "" {
+					w.Header().Set("Vary", oldCachedPage.Vary)
+				}
+
+				fmt.Println("That should be the page")
+				return
+			}
+		}
+
 		var client http.Client
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
@@ -228,12 +271,14 @@ func main() {
 			return
 		}
 
-		for _, reqCacheHeader := range []string{"cache-control", "if-modified-since", "if-none-match", "if-match"} {
-			reqHeader := r.Header.Get(reqCacheHeader)
-			if reqHeader != "" {
-				r.Header.Set(reqCacheHeader, reqHeader)
+		/*
+			for _, reqCacheHeader := range []string{"cache-control", "if-modified-since", "if-none-match", "if-match"} {
+				reqHeader := r.Header.Get(reqCacheHeader)
+				if reqHeader != "" {
+					r.Header.Set(reqCacheHeader, reqHeader)
+				}
 			}
-		}
+		*/
 
 		resp, err := client.Do(req)
 		if err != nil {
@@ -314,32 +359,56 @@ func main() {
 		}
 
 		cache := false
-		cachedPage := CachedPage{}
+		newCachedPage := CachedPage{}
+
 		// Pass the upstream caching headers to the browser. This should be enough for speed optimization.
-		for _, header := range []string{"Etag", "Last-Modified", "Cache-Control", "Expires"} {
+		for _, header := range []string{"Etag", "Last-Modified", "Cache-Control", "Expires", "Content-Location", "Date", "Vary"} {
 			respHeader := resp.Header.Get(header)
 			if respHeader != "" {
 				w.Header().Set(header, respHeader)
 			}
 
-			if header == "ETag" {
+			fmt.Println(header, respHeader)
+
+			if header == "Etag" {
 				cache = true
-				cachedPage.ETag = respHeader
+				newCachedPage.ETag = respHeader
+				fmt.Println("Caching page with etag", respHeader)
 			}
 
 			if header == "Last-Modified" {
 				cache = true
 				lastModified, err := http.ParseTime(respHeader)
 				if err == nil {
-					cachedPage.LastModified = lastModified
+					newCachedPage.LastModified = lastModified
 				}
+			}
+
+			if header == "Cache-Control" {
+				newCachedPage.CacheControl = respHeader
+			}
+
+			if header == "Expires" {
+				newCachedPage.Expires = respHeader
+			}
+
+			if header == "Content-Location" {
+				newCachedPage.ContentLocation = respHeader
+			}
+
+			if header == "Date" {
+				newCachedPage.Date = respHeader
+			}
+
+			if header == "Vary" {
+				newCachedPage.Vary = respHeader
 			}
 		}
 
 		if cache {
-			cachedPage.Body = pageBuilder.Bytes()
+			fmt.Println("Putting page in cache")
 			pageCacheMutex.Lock()
-			pageCache[r.URL.String()] = cachedPage
+			pageCache[r.URL.String()] = newCachedPage
 			pageCacheMutex.Unlock()
 		}
 
