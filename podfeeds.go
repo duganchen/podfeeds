@@ -202,6 +202,8 @@ func CacheSubscriptions() {
 
 func main() {
 
+	// We just leave this directory around. Sorry.
+	// https://groups.google.com/g/golang-nuts/c/vDd72SHUnbQ/m/Kj0xOa0AAQAJ
 	_, err := os.Stat("/tmp/podfeeds")
 	if err != nil {
 		os.MkdirAll("/tmp/podfeeds", os.ModePerm)
