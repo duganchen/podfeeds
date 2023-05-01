@@ -239,52 +239,55 @@ func main() {
 			return
 		}
 
-		pageCacheMutex.Lock()
-		oldCachedPage, ok := pageCache[r.URL.String()]
-		pageCacheMutex.Unlock()
-		pageIsCached := false
-		if ok {
-			etag := r.Header.Get("If-None-Match")
-			if etag != "" && etag == oldCachedPage.ETag {
-				pageIsCached = true
-			} else {
-				requestedTime, err := http.ParseTime(r.Header.Get("If-Modified-Since"))
-				if err == nil {
-					cachedTime, err := http.ParseTime(oldCachedPage.LastModified)
-					if err == nil && cachedTime.Compare(requestedTime) == -1 {
-						pageIsCached = true
+		// This is what Lynx sends when you open a link with "x".
+		if r.Header.Get("Cache-Control") != "no-cache" {
+			pageCacheMutex.Lock()
+			oldCachedPage, ok := pageCache[r.URL.String()]
+			pageCacheMutex.Unlock()
+			pageIsCached := false
+			if ok {
+				etag := r.Header.Get("If-None-Match")
+				if etag != "" && etag == oldCachedPage.ETag {
+					pageIsCached = true
+				} else {
+					requestedTime, err := http.ParseTime(r.Header.Get("If-Modified-Since"))
+					if err == nil {
+						cachedTime, err := http.ParseTime(oldCachedPage.LastModified)
+						if err == nil && cachedTime.Compare(requestedTime) == -1 {
+							pageIsCached = true
+						}
 					}
 				}
-			}
 
-			if pageIsCached {
-				w.Header().Set("Etag", etag)
+				if pageIsCached {
+					w.Header().Set("Etag", etag)
 
-				if oldCachedPage.CacheControl != "" {
-					w.Header().Set("Cache-Control", oldCachedPage.CacheControl)
+					if oldCachedPage.CacheControl != "" {
+						w.Header().Set("Cache-Control", oldCachedPage.CacheControl)
+					}
+
+					if oldCachedPage.ContentLocation != "" {
+						w.Header().Set("Content-Location", oldCachedPage.ContentLocation)
+					}
+
+					if oldCachedPage.Date != "" {
+						w.Header().Set("Date", oldCachedPage.Date)
+					}
+
+					if oldCachedPage.Expires != "" {
+						w.Header().Set("Expires", oldCachedPage.Expires)
+					}
+
+					if oldCachedPage.Vary != "" {
+						w.Header().Set("Vary", oldCachedPage.Vary)
+					}
+
+					if oldCachedPage.LastModified != "" {
+						w.Header().Set("LastModified", oldCachedPage.LastModified)
+					}
+					w.WriteHeader(http.StatusNotModified)
+					return
 				}
-
-				if oldCachedPage.ContentLocation != "" {
-					w.Header().Set("Content-Location", oldCachedPage.ContentLocation)
-				}
-
-				if oldCachedPage.Date != "" {
-					w.Header().Set("Date", oldCachedPage.Date)
-				}
-
-				if oldCachedPage.Expires != "" {
-					w.Header().Set("Expires", oldCachedPage.Expires)
-				}
-
-				if oldCachedPage.Vary != "" {
-					w.Header().Set("Vary", oldCachedPage.Vary)
-				}
-
-				if oldCachedPage.LastModified != "" {
-					w.Header().Set("LastModified", oldCachedPage.LastModified)
-				}
-				w.WriteHeader(http.StatusNotModified)
-				return
 			}
 		}
 
