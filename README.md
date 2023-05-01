@@ -116,5 +116,5 @@ etag and last-modified headers from Podfeeds, and send it corresponding if-none-
 
 To build Podfeeds as a container and run it, do the following:
 
-    docker build --tag podfeeds .
+    docker build -t podfeeds .
     docker run -v /path/to/podcasts.yaml:/etc/podfeeds/podcasts.yaml -p 8080:8080 -d --name podfeeds podfeeds
