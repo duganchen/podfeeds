@@ -126,7 +126,7 @@ And then bring the whole thing up:
 
     docker compose up -d
 
-Browse your podcasts at http://localhost:8080.
+Browse your podcasts at http://localhost:8081.
 
 And then tear it down;
 
