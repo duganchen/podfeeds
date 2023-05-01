@@ -6,6 +6,11 @@ This is an HTTP server-based podcast aggregator. Just as other aggregators use C
 
 ## Setting Up Lynx
 
+On some systems, you will need to [build Lynx yourself](https://www.linuxfromscratch.org/blfs/view/svn/basicnet/lynx.html)
+to achieve this setup. After applying any patches from the previous link, the following configuration will give you a user-level installation with everything you need:
+
+    ./configure --prefix=$HOME/.local --enable-externs --with-zlib --with-bzlib --with-ssl --with-screen=ncursesw --enable-locale-charset --enable-default-colors
+
 Set Lynx up to open media files in your favorite media player. For example, I have the following ~/.mailcap to get Lynx to open them in [mpv](https://mpv.io/):
 
     audio/*; mpv %s
