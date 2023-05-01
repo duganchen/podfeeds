@@ -83,8 +83,9 @@ Or press "." to download them with HTTPie.
 
 ## Notes on Performance
 
-Consider putting a caching proxy in front of Podfeeds. The proxy would need to receive
-etag and last-modified headers from Podfeeds, and send it corresponding if-none-match and if-modified headers. The following nginx.conf (which is a reverse proxy that would listen at port 8081 and forward to Podfeeds at http://localhost:8080) is a working example:
+Text browsers like Lynx and w3m do not have browser caches.
+
+In their place, consider putting a caching proxy in front of Podfeeds. Ideally, one that knows how to receive etag and last-modified headers from Podfeeds, and send corresponding if-none-match and if-modified headers back. The following nginx.conf (which is a reverse proxy that would listen at port 8081 and forward to Podfeeds at http://localhost:8080) is a working example:
 
     events {
         worker_connections 1024;
@@ -114,7 +115,19 @@ etag and last-modified headers from Podfeeds, and send it corresponding if-none-
 
 ## Docker
 
-To build Podfeeds as a container and run it, do the following:
+In the current directory, write your podcasts.yaml file.
+
+Build the podfeeds image. Pull the nginx image.
 
     docker build -t podfeeds .
-    docker run -v /path/to/podcasts.yaml:/etc/podfeeds/podcasts.yaml -dp 8080:8080 --name podfeeds podfeeds
+    docker pull nginx
+
+And then bring the whole thing up:
+
+    docker compose up -d
+
+Browse your podcasts at http://localhost:8080.
+
+And then tear it down;
+
+    docker compose down
