@@ -27,16 +27,15 @@
     {{ range .Items }}
     <h2 id="{{ .GUID }}">{{ .Title }}</h2>
 
-    <div>
-        {{ .Description }}
-    </div>
-
     {{ range .Enclosures }}
     <p>
         <a href="{{ .URL }}">Enclosure</a>
     </p>
     {{ end }}
 
+    <div>
+        {{ .Description }}
+    </div>
 
     <table>
         {{ range .Metadata }}
