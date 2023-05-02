@@ -225,6 +225,7 @@ func main() {
 	http.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("modest/css"))))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, r, "/tmp/podfeeds/index.html")
 	})
 
