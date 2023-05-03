@@ -58,19 +58,6 @@ type Podcast struct {
 	ToC []ToCEntry
 }
 
-type CachedPage struct {
-	LastModified string
-	ETag         string
-
-	// List from here.
-	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match
-	CacheControl    string
-	ContentLocation string
-	Date            string
-	Expires         string
-	Vary            string
-}
-
 var (
 	indexTemplate   *template.Template
 	podcastTemplate *template.Template
@@ -80,9 +67,6 @@ func init() {
 	indexTemplate = template.Must(template.ParseFiles("./templates/index.html"))
 	podcastTemplate = template.Must(template.ParseFiles("./templates/podcast.html"))
 }
-
-// URL to cached page
-var pageCache = make(map[string]CachedPage)
 
 func FetchSubscription(feed string) (Subscription, error) {
 	// We have the URL. We just need the title.
@@ -225,11 +209,8 @@ func main() {
 	http.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("modest/css"))))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, r, "/tmp/podfeeds/index.html")
 	})
-
-	pageCacheMutex := sync.Mutex{}
 
 	http.HandleFunc("/podcast", func(w http.ResponseWriter, r *http.Request) {
 
@@ -240,68 +221,44 @@ func main() {
 			return
 		}
 
-		// This is what Lynx sends when you open a link with "x".
-		if r.Header.Get("Cache-Control") != "no-cache" {
-			pageCacheMutex.Lock()
-			oldCachedPage, ok := pageCache[r.URL.String()]
-			pageCacheMutex.Unlock()
-			pageIsCached := false
-			if ok {
-				etag := r.Header.Get("If-None-Match")
-				if etag != "" && etag == oldCachedPage.ETag {
-					pageIsCached = true
-				} else {
-					requestedTime, err := http.ParseTime(r.Header.Get("If-Modified-Since"))
-					if err == nil {
-						cachedTime, err := http.ParseTime(oldCachedPage.LastModified)
-						if err == nil && cachedTime.Compare(requestedTime) == -1 {
-							pageIsCached = true
-						}
-					}
-				}
-
-				if pageIsCached {
-					w.Header().Set("Etag", etag)
-
-					if oldCachedPage.CacheControl != "" {
-						w.Header().Set("Cache-Control", oldCachedPage.CacheControl)
-					}
-
-					if oldCachedPage.ContentLocation != "" {
-						w.Header().Set("Content-Location", oldCachedPage.ContentLocation)
-					}
-
-					if oldCachedPage.Date != "" {
-						w.Header().Set("Date", oldCachedPage.Date)
-					}
-
-					if oldCachedPage.Expires != "" {
-						w.Header().Set("Expires", oldCachedPage.Expires)
-					}
-
-					if oldCachedPage.Vary != "" {
-						w.Header().Set("Vary", oldCachedPage.Vary)
-					}
-
-					if oldCachedPage.LastModified != "" {
-						w.Header().Set("LastModified", oldCachedPage.LastModified)
-					}
-					w.WriteHeader(http.StatusNotModified)
-					return
-				}
-			}
-		}
-
 		var client http.Client
+		fmt.Println("url is ", url)
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
+		etag := r.Header.Get("If-None-Match")
+		if etag != "" {
+			fmt.Println("Setting request etag to ", etag)
+			req.Header.Set("If-None-Match", etag)
+		}
+
+		ifModifiedSince := r.Header.Get("If-Modified-Since")
+		if ifModifiedSince != "" {
+			req.Header.Set("If-Modified-Since", ifModifiedSince)
+		}
+
 		resp, err := client.Do(req)
+
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Pass the upstream caching headers to the browser. This should be enough for speed optimization.
+		for _, header := range []string{"Etag", "Last-Modified", "Cache-Control", "Expires", "Content-Location", "Date", "Vary"} {
+			respHeader := resp.Header.Get(header)
+			if respHeader != "" {
+				w.Header().Set(header, respHeader)
+			}
+		}
+
+		fmt.Println("Status is ", resp.StatusCode)
+		w.WriteHeader(resp.StatusCode)
+
+		if resp.StatusCode == http.StatusNotModified {
 			return
 		}
 
@@ -376,66 +333,7 @@ func main() {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-
-		cache := false
-		newCachedPage := CachedPage{}
-
-		// Pass the upstream caching headers to the browser. This should be enough for speed optimization.
-		for _, header := range []string{"Etag", "Last-Modified", "Cache-Control", "Expires", "Content-Location", "Date", "Vary"} {
-			respHeader := resp.Header.Get(header)
-			if respHeader != "" {
-				w.Header().Set(header, respHeader)
-			}
-
-			if header == "Etag" {
-				cache = true
-				newCachedPage.ETag = respHeader
-			}
-
-			if header == "Last-Modified" {
-				cache = true
-				newCachedPage.LastModified = respHeader
-			}
-
-			if header == "Cache-Control" {
-				newCachedPage.CacheControl = respHeader
-			}
-
-			if header == "Expires" {
-				newCachedPage.Expires = respHeader
-			}
-
-			if header == "Content-Location" {
-				newCachedPage.ContentLocation = respHeader
-			}
-
-			if header == "Date" {
-				newCachedPage.Date = respHeader
-			}
-
-			if header == "Vary" {
-				newCachedPage.Vary = respHeader
-			}
-		}
-
-		if cache {
-			pageCacheMutex.Lock()
-			pageCache[r.URL.String()] = newCachedPage
-			pageCacheMutex.Unlock()
-		}
-
 		w.Write(pageBuilder.Bytes())
-
-		/*
-			// These responses can be large, and I'm finding that there can be a delay even when Squid has a
-			// cache hit. What if we gzip them?
-			w.Header().Set("Content-Encoding", "gzip")
-			w.Header().Set("Content-Type", "text/html")
-			gw := gzip.NewWriter(w)
-			defer gw.Close()
-
-			gw.Write(pageBuilder.Bytes())
-		*/
 	})
 
 	port, set := os.LookupEnv("PORT")
