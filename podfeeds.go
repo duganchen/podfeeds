@@ -255,10 +255,20 @@ func main() {
 			}
 		}
 
-		fmt.Println("Status is ", resp.StatusCode)
 		w.WriteHeader(resp.StatusCode)
 
 		if resp.StatusCode == http.StatusNotModified {
+			return
+		}
+
+		// This should handle cases where there are issues with the feed.
+		// iI actually haven't tested it yet.
+		if resp.StatusCode != http.StatusOK {
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				http.Error(w, err.Error(), resp.StatusCode)
+			}
+			w.Write(body)
 			return
 		}
 
