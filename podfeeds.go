@@ -287,6 +287,7 @@ func main() {
 						w.Header().Set("LastModified", oldCachedPage.LastModified)
 					}
 					w.WriteHeader(http.StatusNotModified)
+					fmt.Println("Cache hit")
 					return
 				}
 			}
@@ -424,6 +425,7 @@ func main() {
 			pageCacheMutex.Unlock()
 		}
 
+		fmt.Println("Cache miss")
 		w.Write(pageBuilder.Bytes())
 
 		/*
