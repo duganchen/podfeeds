@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -255,6 +256,16 @@ func main() {
 			}
 		}
 
+		encodings := r.Header["Accept-Encoding"]
+		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
+
+		if compress {
+			fmt.Println("Compressing")
+			w.Header().Set("Content-Encoding", "gzip")
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		}
+
+		// Headers apparently need to be set before this.
 		w.WriteHeader(resp.StatusCode)
 
 		if resp.StatusCode == http.StatusNotModified {
@@ -343,7 +354,15 @@ func main() {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-		w.Write(pageBuilder.Bytes())
+
+		if compress {
+			gw := gzip.NewWriter(w)
+			defer gw.Close()
+			gw.Write(pageBuilder.Bytes())
+		} else {
+			w.Write(pageBuilder.Bytes())
+		}
+
 	})
 
 	port, set := os.LookupEnv("PORT")
