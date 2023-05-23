@@ -231,7 +231,6 @@ func main() {
 
 		etag := r.Header.Get("If-None-Match")
 		if etag != "" {
-			fmt.Println("Setting request etag to ", etag)
 			req.Header.Set("If-None-Match", etag)
 		}
 
@@ -258,16 +257,6 @@ func main() {
 		encodings := r.Header["Accept-Encoding"]
 		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
 
-		// I haven't benchmarked, but I'd imagine that supporting gzip would work well if
-		// the browser or proxy cache in front of this is working.
-		if compress {
-			w.Header().Set("Content-Encoding", "gzip")
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		}
-
-		// Headers apparently need to be set before this.
-		w.WriteHeader(resp.StatusCode)
-
 		if resp.StatusCode == http.StatusNotModified {
 			return
 		}
@@ -278,6 +267,7 @@ func main() {
 			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
 				http.Error(w, err.Error(), resp.StatusCode)
+				return
 			}
 			w.Write(body)
 			return
@@ -349,6 +339,16 @@ func main() {
 			podcast.ToC = nil
 		}
 
+		// I haven't benchmarked, but I'd imagine that supporting gzip would work well if
+		// the browser or proxy cache in front of this is working.
+		if compress {
+			w.Header().Set("Content-Encoding", "gzip")
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		}
+
+		// Headers apparently need to be set before this.
+		w.WriteHeader(resp.StatusCode)
+
 		if compress {
 			gw := gzip.NewWriter(w)
 			defer gw.Close()
@@ -359,6 +359,7 @@ func main() {
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 	})
