@@ -127,6 +127,10 @@ Build the podfeeds image. Pull the nginx image.
     docker build -t podfeeds .
     docker pull nginx
 
+Create a volume for the persistent nginx cache:
+
+    docker volume create nginx_tmp
+
 And then bring the whole thing up:
 
     docker compose up -d
