@@ -207,7 +207,7 @@ func main() {
 	// Why not just have a global parser
 	g_fp := gofeed.NewParser()
 
-	http.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("modest/css"))))
+	http.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("bamboo/dist"))))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "/tmp/podfeeds/index.html")
@@ -258,6 +258,7 @@ func main() {
 		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
 
 		if resp.StatusCode == http.StatusNotModified {
+			w.WriteHeader(resp.StatusCode)
 			return
 		}
 
@@ -351,7 +352,6 @@ func main() {
 			return
 		}
 
-		// Headers apparently need to be set before this.
 		w.WriteHeader(resp.StatusCode)
 
 		if compress {
@@ -360,6 +360,11 @@ func main() {
 			err = podcastTemplate.Execute(gw, podcast)
 		} else {
 			err = podcastTemplate.Execute(w, podcast)
+		}
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 	})

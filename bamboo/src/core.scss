@@ -1,0 +1,393 @@
+*,
+::before,
+::after {
+	box-sizing: border-box;
+}
+html:focus-within {
+	scroll-behavior: smooth;
+}
+body {
+	max-width: 70ch;
+	padding: 0 1rem;
+	margin: auto;
+	background: var(--b-bg-1);
+	font-family: var(--b-font-main);
+	text-rendering: optimizeSpeed;
+	line-height: 1.5;
+	color: var(--b-txt);
+	-moz-tab-size: 4;
+	tab-size: 4;
+	word-break: break-word;
+	overflow-wrap: break-word; // Breaks words to prevent overflow in all browsers
+	-webkit-tap-highlight-color: transparent; // Remove the grey highlight on links in iOS.
+	-webkit-text-size-adjust: 100%;  // Prevent adjustments of font size after orientation changes in iOS.
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+ul,
+ol,
+dl,
+dd,
+details,
+blockquote,
+pre,
+figure,
+table,
+address,
+hr,
+fieldset,
+iframe,
+audio,
+video {
+	margin: 0 0 1.5rem;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	line-height: 1.25;
+	margin-top: 2rem;
+}
+h1 {
+	font-size: 2rem;
+}
+h2 {
+	font-size: 1.5rem;
+}
+h3 {
+	font-size: 1.25rem;
+}
+h4 {
+	font-size: 1rem;
+}
+h5 {
+	font-size: .875rem;
+}
+h6 {
+	font-size: .75rem;
+}
+a {
+	color: var(--b-link);
+	text-decoration: none;
+}
+a:hover {
+	text-decoration: underline;
+}
+img,
+video,
+svg {
+	max-width: 100%;
+	height: auto;
+}
+embed,
+iframe,
+object {
+	max-width: 100%;
+}
+iframe {
+	border-style: none;
+}
+
+// Add the correct text decoration in Chrome, Edge, and Safari.
+abbr[title] {
+	text-decoration: underline dotted;
+}
+// Add the correct font weight in Edge and Safari.
+b,
+strong {
+	font-weight: bolder;
+}
+blockquote {
+	margin-left: 0;
+	padding: .5rem 0 .5rem 1.5rem;
+	border-left: .25rem solid var(--b-txt);
+}
+blockquote > :last-child {
+	margin-bottom: 0;
+}
+small {
+	font-size: .875rem;
+}
+
+// Prevent `sub` and `sup` elements from affecting the line height in all browsers.
+sub,
+sup {
+	font-size: 75%;
+	line-height: 0;
+	position: relative;
+	vertical-align: baseline;
+}
+sub {
+	bottom: -.25em;
+}
+sup {
+	top: -.5em;
+}
+
+hr {
+	height: 0; // Add the correct box sizing in Firefox.
+	border: 0;
+	border-bottom: 1px solid var(--b-line);
+}
+
+// Code.
+pre,
+code,
+kbd,
+samp,
+tt,
+var {
+	background: var(--b-bg-2);
+	border-radius: .25rem;
+	padding: .125rem .25rem;
+	font-family: var(--b-font-mono);
+	font-size: .875rem;
+}
+pre {
+	padding: 1rem;
+	overflow: auto;
+	white-space: pre;
+}
+pre code {
+	padding: 0;
+}
+
+// Details.
+details {
+	display: block;
+	padding: .5rem 1rem;
+	background: var(--b-bg-2);
+	border: 1px solid var(--b-line);
+	border-radius: .25rem;
+}
+details > :last-child {
+	margin-bottom: 0;
+}
+details[open] > summary {
+	margin-bottom: 1.5rem;
+}
+summary {
+	display: list-item;
+	cursor: pointer;
+	font-weight: bold;
+}
+summary:focus {
+	box-shadow: none;
+}
+
+// Table.
+table {
+	border-collapse: collapse;
+	width: 100%;
+	text-indent: 0; // Remove text indentation from table contents in Chrome and Safari.
+}
+table caption {
+	margin-bottom: .5rem;
+}
+tr {
+	border-bottom: 1px solid var(--b-line);
+}
+td,
+th {
+	padding: .5rem 0 .5rem 1rem;
+	word-break: normal;
+
+	&:first-child {
+		padding-left: 0;
+	}
+}
+
+th {
+	text-align: left;
+}
+
+// Lists.
+ul,
+ol,
+dd {
+	padding-left: 2rem;
+}
+li > ul,
+li > ol {
+	margin-bottom: 0;
+}
+
+// Forms.
+fieldset {
+	padding: .5rem .75rem;
+	border: 1px solid var(--b-line);
+	border-radius: .25rem;
+}
+legend {
+	padding: 0 .25rem;
+}
+label {
+	cursor: pointer;
+	display: block;
+	margin-bottom: .25rem;
+}
+button,
+input,
+select,
+textarea {
+	margin: 0;
+	padding: .5rem .75rem;
+	max-width: 100%;
+	background: var(--b-bg-2);
+	border: 0;
+	border-radius: .25rem;
+	font: inherit;
+	line-height: 1.125;
+	color: var(--b-txt);
+}
+// Remove the inheritance of text transform in Edge and Firefox.
+button,
+select {
+	text-transform: none;
+}
+select,
+input:not([size]):not([type="button" i]):not([type="submit" i]):not([type="reset" i]):not([type="checkbox" i]):not([type="radio" i]) {
+	width: 100%;
+}
+[type="color" i] {
+	min-height: 2.125rem;
+}
+select:not([multiple]):not([size]) {
+	padding-right: 1.5rem;
+	background-repeat: no-repeat;
+	background-position: right .5rem center;
+	-moz-appearance: none;
+	-webkit-appearance: none;
+	appearance: none;
+}
+textarea {
+	width: 100%;
+	resize: vertical;
+}
+textarea:not([rows]) {
+	height: 8rem;
+}
+
+// Disable double click to zoom in iOS.
+button {
+    touch-action: manipulation;
+}
+button,
+[type="button" i],
+[type="submit" i],
+[type="reset" i] {
+	-webkit-appearance: button; // Correct the inability to style clickable types in iOS and Safari.
+	display: inline-block;
+	text-align: center;
+	white-space: nowrap;
+	background: var(--b-btn-bg);
+	color: var(--b-btn-txt);
+	border: 0;
+	cursor: pointer;
+	transition: opacity .25s;
+}
+button:hover,
+[type="button" i]:hover,
+[type="submit" i]:hover,
+[type="reset" i]:hover {
+	opacity: .75;
+}
+button[disabled],
+[type="button" i][disabled],
+[type="submit" i][disabled],
+[type="reset" i][disabled] {
+	opacity: .5;
+}
+
+// Add the correct vertical alignment in Chrome and Firefox.
+progress {
+	vertical-align: baseline;
+}
+
+// 1. Correct the odd appearance in Chrome and Safari.
+// 2. Correct the outline style in Safari.
+[type="search" i] {
+	-webkit-appearance: textfield; // 1
+	outline-offset: -2px; // 2
+}
+
+// Correct the cursor style of increment and decrement buttons in Safari.
+::-webkit-inner-spin-button,
+::-webkit-outer-spin-button {
+	height: auto;
+}
+
+// Correct the text style of placeholders in Chrome, Edge, and Safari.
+::-webkit-input-placeholder {
+	color: inherit;
+	opacity: .5;
+}
+
+// Remove the inner padding in Chrome and Safari on macOS.
+::-webkit-search-decoration {
+	-webkit-appearance: none;
+}
+
+// 1. Correct the inability to style clickable types in iOS and Safari.
+// 2. Change font properties to `inherit` in Safari.
+::-webkit-file-upload-button {
+	-webkit-appearance: button; // 1
+	font: inherit; // 2
+}
+
+// Remove the inner border and padding in Firefox.
+::-moz-focus-inner {
+	border-style: none;
+	padding: 0;
+}
+
+// Restore the focus styles unset by the previous rule.
+:-moz-focusring {
+	outline: 1px dotted ButtonText;
+}
+
+// Remove the additional :invalid styles in Firefox.
+:-moz-ui-invalid {
+	box-shadow: none;
+}
+
+// Accessibility.
+[aria-busy="true" i] {
+	cursor: progress;
+}
+[aria-controls] {
+	cursor: pointer;
+}
+[aria-disabled="true" i],
+[disabled] {
+	cursor: not-allowed;
+}
+:focus,
+details:focus-within {
+	outline: none;
+	box-shadow: 0 0 0 2px var(--b-focus);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html:focus-within {
+		scroll-behavior: auto;
+	}
+	*,
+	::before,
+	::after {
+		animation-delay: -1ms !important;
+		animation-duration: 1ms !important;
+		animation-iteration-count: 1 !important;
+		background-attachment: initial !important;
+		scroll-behavior: auto !important;
+		transition-delay: 0 !important;
+		transition-duration: 0 !important;
+	}
+}

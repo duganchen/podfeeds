@@ -1,0 +1,29 @@
+{
+	"name": "bamboo.css",
+	"version": "1.3.11",
+	"description": "A classless CSS library",
+	"main": "dist/bamboo.min.css",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/rilwis/bamboo.git"
+	},
+	"keywords": [
+		"css",
+		"html",
+		"sanitize",
+		"normalize",
+		"style"
+	],
+	"author": "Anh Tran <rilwis@gmail.com>",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/rilwis/bamboo/issues"
+	},
+	"homepage": "https://github.com/rilwis/bamboo",
+	"scripts": {
+		"main": "sass --no-source-map --style compressed src/main.scss dist/bamboo.min.css",
+		"dark": "sass --no-source-map --style compressed src/dark.scss dist/dark.min.css",
+		"light": "sass --no-source-map --style compressed src/light.scss dist/light.min.css",
+		"start": "npm run main && npm run dark && npm run light"
+	}
+}
