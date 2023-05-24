@@ -346,6 +346,11 @@ func main() {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		}
 
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		// Headers apparently need to be set before this.
 		w.WriteHeader(resp.StatusCode)
 
@@ -355,11 +360,6 @@ func main() {
 			err = podcastTemplate.Execute(gw, podcast)
 		} else {
 			err = podcastTemplate.Execute(w, podcast)
-		}
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 		}
 
 	})
