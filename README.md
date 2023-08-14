@@ -88,7 +88,7 @@ Or press "." to download them with HTTPie.
 
 ## Docker
 
-In the current directory, write your podcasts.yaml file.
+In the repository directory, write your podcasts.yaml file.
 
 Build the podfeeds image. Pull the nginx image.
 
