@@ -15,7 +15,6 @@ import (
 	"text/template"
 
 	"github.com/fsnotify/fsnotify"
-	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/mmcdole/gofeed"
@@ -142,7 +141,7 @@ func CacheSubscriptions() {
 		podcasts = "/etc/podfeeds/podcasts.yaml"
 	}
 
-	buf, err := ioutil.ReadFile(podcasts)
+	buf, err := os.ReadFile(podcasts)
 	if err != nil {
 		log.Fatal(err)
 	}

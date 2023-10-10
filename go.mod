@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/fsnotify/fsnotify v1.6.0
-	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/mmcdole/gofeed v1.2.1
 	golang.org/x/sync v0.1.0
 	gopkg.in/yaml.v3 v3.0.1
