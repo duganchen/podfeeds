@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -264,7 +264,7 @@ func main() {
 		// This should handle cases where there are issues with the feed.
 		// iI actually haven't tested it yet.
 		if resp.StatusCode != http.StatusOK {
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				http.Error(w, err.Error(), resp.StatusCode)
 				return
