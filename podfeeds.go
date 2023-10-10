@@ -184,6 +184,163 @@ func CacheSubscriptions() {
 	podcastCachingChannel <- 1
 }
 
+func handlePodcast(w http.ResponseWriter, r *http.Request) {
+	url := r.URL.Query().Get("url")
+
+	if url == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	var client http.Client
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	etag := r.Header.Get("If-None-Match")
+	if etag != "" {
+		req.Header.Set("If-None-Match", etag)
+	}
+
+	ifModifiedSince := r.Header.Get("If-Modified-Since")
+	if ifModifiedSince != "" {
+		req.Header.Set("If-Modified-Since", ifModifiedSince)
+	}
+
+	resp, err := client.Do(req)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Pass the upstream caching headers to the browser. This should be enough for speed optimization.
+	for _, header := range []string{"Etag", "Last-Modified", "Cache-Control", "Expires", "Content-Location", "Date", "Vary"} {
+		respHeader := resp.Header.Get(header)
+		if respHeader != "" {
+			w.Header().Set(header, respHeader)
+		}
+	}
+
+	encodings := r.Header["Accept-Encoding"]
+	compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
+
+	if resp.StatusCode == http.StatusNotModified {
+		w.WriteHeader(resp.StatusCode)
+		return
+	}
+
+	// This should handle cases where there are issues with the feed.
+	// I actually haven't tested it yet.
+	if resp.StatusCode != http.StatusOK {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			http.Error(w, err.Error(), resp.StatusCode)
+			return
+		}
+		w.Write(body)
+		return
+	}
+
+	fp := gofeed.NewParser()
+
+	parsed, err := fp.Parse(resp.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	var podcast Podcast
+	podcast.Language = parsed.Language
+
+	podcast.Title = parsed.Title
+	podcast.Description = parsed.Description
+
+	for _, parsedItem := range parsed.Items {
+		var item Item
+		item.Description = parsedItem.Description
+		item.Title = parsedItem.Title
+
+		item.GUID = parsedItem.GUID
+
+		podcast.ToC = append(podcast.ToC, ToCEntry{item.GUID, item.Title})
+
+		for _, enclosure := range parsedItem.Enclosures {
+			item.Enclosures = append(item.Enclosures, Enclosure{enclosure.URL, enclosure.Type})
+		}
+
+		if parsedItem.Updated != "" {
+			item.Metadata = append(item.Metadata, Metadata{"Updated", parsedItem.Updated})
+		}
+
+		if parsedItem.Published != "" {
+			item.Metadata = append(item.Metadata, Metadata{"Published", parsedItem.Published})
+		}
+
+		// Skipping "Content". In the feed where I saw it, it has the same content as the
+		// description.
+
+		if len(parsedItem.Authors) > 0 {
+			var authorsBuilder strings.Builder
+			for _, author := range parsedItem.Authors {
+				if author.Name != "" {
+					authorsBuilder.WriteString(author.Name)
+				}
+
+				if author.Name != "" && author.Email != "" {
+					authorsBuilder.WriteString(" (")
+				}
+
+				if author.Email != "" {
+					authorsBuilder.WriteString(author.Email)
+				}
+
+				if author.Name != "" && author.Email != "" {
+					authorsBuilder.WriteString(")")
+				}
+
+				authorsBuilder.WriteString(" ")
+			}
+			item.Metadata = append(item.Metadata, Metadata{"Authors", authorsBuilder.String()})
+		}
+
+		podcast.Items = append(podcast.Items, item)
+	}
+
+	if len(podcast.ToC) == 1 {
+		podcast.ToC = nil
+	}
+
+	// I haven't benchmarked, but I'd imagine that supporting gzip would work well if
+	// the browser or proxy cache in front of this is working.
+	if compress {
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	}
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(resp.StatusCode)
+
+	if compress {
+		gw := gzip.NewWriter(w)
+		defer gw.Close()
+		err = podcastTemplate.Execute(gw, podcast)
+	} else {
+		err = podcastTemplate.Execute(w, podcast)
+	}
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+}
+
 func main() {
 
 	// We just leave this directory around. Sorry.
@@ -203,170 +360,13 @@ func main() {
 	podcastCachingChannel <- 1
 	go CacheSubscriptions()
 
-	// Why not just have a global parser
-	g_fp := gofeed.NewParser()
-
 	http.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("bamboo/dist"))))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "/tmp/podfeeds/index.html")
 	})
 
-	http.HandleFunc("/podcast", func(w http.ResponseWriter, r *http.Request) {
-
-		url := r.URL.Query().Get("url")
-
-		if url == "" {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		var client http.Client
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		etag := r.Header.Get("If-None-Match")
-		if etag != "" {
-			req.Header.Set("If-None-Match", etag)
-		}
-
-		ifModifiedSince := r.Header.Get("If-Modified-Since")
-		if ifModifiedSince != "" {
-			req.Header.Set("If-Modified-Since", ifModifiedSince)
-		}
-
-		resp, err := client.Do(req)
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// Pass the upstream caching headers to the browser. This should be enough for speed optimization.
-		for _, header := range []string{"Etag", "Last-Modified", "Cache-Control", "Expires", "Content-Location", "Date", "Vary"} {
-			respHeader := resp.Header.Get(header)
-			if respHeader != "" {
-				w.Header().Set(header, respHeader)
-			}
-		}
-
-		encodings := r.Header["Accept-Encoding"]
-		compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
-
-		if resp.StatusCode == http.StatusNotModified {
-			w.WriteHeader(resp.StatusCode)
-			return
-		}
-
-		// This should handle cases where there are issues with the feed.
-		// I actually haven't tested it yet.
-		if resp.StatusCode != http.StatusOK {
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				http.Error(w, err.Error(), resp.StatusCode)
-				return
-			}
-			w.Write(body)
-			return
-		}
-
-		parsed, err := g_fp.Parse(resp.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-
-		var podcast Podcast
-		podcast.Language = parsed.Language
-
-		podcast.Title = parsed.Title
-		podcast.Description = parsed.Description
-
-		for _, parsedItem := range parsed.Items {
-			var item Item
-			item.Description = parsedItem.Description
-			item.Title = parsedItem.Title
-
-			item.GUID = parsedItem.GUID
-
-			podcast.ToC = append(podcast.ToC, ToCEntry{item.GUID, item.Title})
-
-			for _, enclosure := range parsedItem.Enclosures {
-				item.Enclosures = append(item.Enclosures, Enclosure{enclosure.URL, enclosure.Type})
-			}
-
-			if parsedItem.Updated != "" {
-				item.Metadata = append(item.Metadata, Metadata{"Updated", parsedItem.Updated})
-			}
-
-			if parsedItem.Published != "" {
-				item.Metadata = append(item.Metadata, Metadata{"Published", parsedItem.Published})
-			}
-
-			// Skipping "Content". In the feed where I saw it, it has the same content as the
-			// description.
-
-			if len(parsedItem.Authors) > 0 {
-				var authorsBuilder strings.Builder
-				for _, author := range parsedItem.Authors {
-					if author.Name != "" {
-						authorsBuilder.WriteString(author.Name)
-					}
-
-					if author.Name != "" && author.Email != "" {
-						authorsBuilder.WriteString(" (")
-					}
-
-					if author.Email != "" {
-						authorsBuilder.WriteString(author.Email)
-					}
-
-					if author.Name != "" && author.Email != "" {
-						authorsBuilder.WriteString(")")
-					}
-
-					authorsBuilder.WriteString(" ")
-				}
-				item.Metadata = append(item.Metadata, Metadata{"Authors", authorsBuilder.String()})
-			}
-
-			podcast.Items = append(podcast.Items, item)
-		}
-
-		if len(podcast.ToC) == 1 {
-			podcast.ToC = nil
-		}
-
-		// I haven't benchmarked, but I'd imagine that supporting gzip would work well if
-		// the browser or proxy cache in front of this is working.
-		if compress {
-			w.Header().Set("Content-Encoding", "gzip")
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		}
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(resp.StatusCode)
-
-		if compress {
-			gw := gzip.NewWriter(w)
-			defer gw.Close()
-			err = podcastTemplate.Execute(gw, podcast)
-		} else {
-			err = podcastTemplate.Execute(w, podcast)
-		}
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-	})
+	http.HandleFunc("/podcast", handlePodcast)
 
 	port, set := os.LookupEnv("PORT")
 
