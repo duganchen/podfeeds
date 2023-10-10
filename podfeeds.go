@@ -262,7 +262,7 @@ func main() {
 		}
 
 		// This should handle cases where there are issues with the feed.
-		// iI actually haven't tested it yet.
+		// I actually haven't tested it yet.
 		if resp.StatusCode != http.StatusOK {
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
