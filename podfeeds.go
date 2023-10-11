@@ -98,7 +98,7 @@ func FetchSubscriptionAsync(feed string, feedIndexes map[string]int, mutex *sync
 	}
 }
 
-// Only allow one podcasts-caching thread a a time
+// Only allow one podcasts-caching thread at a time
 var podcastCachingChannel = make(chan int, 1)
 
 func SetupWatcher(watcher *fsnotify.Watcher) {
