@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"compress/gzip"
 	"fmt"
 	"io"
 	"log"
@@ -224,9 +223,6 @@ func handlePodcast(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	encodings := r.Header["Accept-Encoding"]
-	compress := len(encodings) > 0 && strings.Contains(encodings[0], "gzip")
-
 	if resp.StatusCode == http.StatusNotModified {
 		w.WriteHeader(resp.StatusCode)
 		return
@@ -312,13 +308,6 @@ func handlePodcast(w http.ResponseWriter, r *http.Request) {
 		podcast.ToC = nil
 	}
 
-	// I haven't benchmarked, but I'd imagine that supporting gzip would work well if
-	// the browser or proxy cache in front of this is working.
-	if compress {
-		w.Header().Set("Content-Encoding", "gzip")
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	}
-
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -326,13 +315,7 @@ func handlePodcast(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 
-	if compress {
-		gw := gzip.NewWriter(w)
-		defer gw.Close()
-		err = podcastTemplate.Execute(gw, podcast)
-	} else {
-		err = podcastTemplate.Execute(w, podcast)
-	}
+	err = podcastTemplate.Execute(w, podcast)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
