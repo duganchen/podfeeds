@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"text/template"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"golang.org/x/sync/errgroup"
@@ -266,12 +267,12 @@ func handlePodcast(w http.ResponseWriter, r *http.Request) {
 			item.Enclosures = append(item.Enclosures, Enclosure{enclosure.URL, enclosure.Type})
 		}
 
-		if parsedItem.Updated != "" {
-			item.Metadata = append(item.Metadata, Metadata{"Updated", parsedItem.Updated})
+		if parsedItem.UpdatedParsed != nil {
+			item.Metadata = append(item.Metadata, Metadata{"Updated", parsedItem.UpdatedParsed.Format(time.RFC822)})
 		}
 
-		if parsedItem.Published != "" {
-			item.Metadata = append(item.Metadata, Metadata{"Published", parsedItem.Published})
+		if parsedItem.PublishedParsed != nil {
+			item.Metadata = append(item.Metadata, Metadata{"Published", parsedItem.PublishedParsed.Format(time.RFC822)})
 		}
 
 		// Skipping "Content". In the feed where I saw it, it has the same content as the
