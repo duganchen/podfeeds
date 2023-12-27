@@ -29,6 +29,12 @@ Install [HTTPie](https://httpie.io/) and put the following in the EXTERNAL secti
 
     EXTERNAL:https:http -d %s:TRUE
 
+## Building Podfeeds
+
+    go build
+
+That will produce an executable named "podfeeds".
+
 ## Gathering Feed URLs
 
 Gather your podcast feed URLs. One way to find them is to
@@ -37,8 +43,12 @@ use the "podfeed" script I posted here:
 [CLI app to get podcast feed URLs
 ](https://www.linuxquestions.org/questions/linuxquestions-org-member-success-stories-23/cli-app-to-get-podcast-feed-urls-4175656322/#post6363987)
 
-Paste them into a file in the repository directory (the one with files like go.mod), named "podcasts.yaml". Separate each line with a
-hyphen and a space, and use # for comments. For example:
+Paste them into a file named podcasts.yaml, in one of the following locations:
+
+* in the same directory as the podfeeds executable
+* in /etc/podfeeds/
+
+Separate each line with a hyphen and a space, and use # for comments. For example:
 
     - https://www.cbc.ca/podcasting/includes/wr.xml # CBC World Report
     - https://www.cbc.ca/podcasting/includes/frontburner.xml
@@ -46,10 +56,6 @@ hyphen and a space, and use # for comments. For example:
     # CBC AS It Happens
     - https://www.cbc.ca/podcasting/includes/asithappens.xml
     - https://www.cbc.ca/podcasting/includes/cbcpowerandpolitics.xml
-
-## Building Podfeeds
-
-    go build
 
 ## Running Podfeeds
 
