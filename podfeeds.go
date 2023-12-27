@@ -246,6 +246,7 @@ func handlePodcast(w http.ResponseWriter, r *http.Request) {
 	parsed, err := fp.Parse(resp.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	var podcast Podcast
