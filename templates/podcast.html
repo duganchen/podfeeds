@@ -18,13 +18,13 @@
     {{ if .ToC }}
     <nav>
         <h2>Episodes</h2>
-        <ol reversed>
+        <ul reversed>
             {{ range .ToC }}
             <li>
                 <a href="#{{ .GUID }}">{{ .Title }}</a>
             </li>
             {{ end }}
-        </ol>
+        </ul>
     </nav>
     {{ end }}
 
