@@ -326,22 +326,34 @@ func handlePodcast(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func help() {
+	fmt.Println("Usage: podfeeds (build|serve)")
+}
+
+func build() {
+	fmt.Println("building")
+}
+
+func serve() {
+	fmt.Println("serving")
+}
+
 func main() {
 
 	if len(os.Args) != 2 {
-		fmt.Println("Usage: podfeeds (build|serve)")
+		help()
 		return
 	}
 
 	switch os.Args[1] {
 	case "build":
-		fmt.Println("building")
+		build()
 		return
 	case "serve":
-		fmt.Println("serving")
+		serve()
 		return
 	default:
-		fmt.Println("Usage: podfeeds (build|serve)")
+		help()
 		return
 	}
 
