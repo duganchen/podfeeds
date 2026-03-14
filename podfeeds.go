@@ -118,7 +118,7 @@ func SetupWatcher(watcher *fsnotify.Watcher) {
 					return
 				}
 				if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Chmod == fsnotify.Chmod {
-					go CacheSubscriptions()
+					go renderIndex()
 				}
 			case err := <-watcher.Errors:
 				if err != nil {
@@ -129,10 +129,7 @@ func SetupWatcher(watcher *fsnotify.Watcher) {
 	}()
 }
 
-func CacheSubscriptions() {
-	// Note that errors thrown here crash the server.
-
-	<-podcastCachingChannel
+func renderIndex() {
 	feeds := make([]string, 0)
 
 	podcasts := "./podcasts.yaml"
@@ -172,16 +169,15 @@ func CacheSubscriptions() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Writing /tmp/podfeeds/index.html")
+	fmt.Println("Writing _site/index.html")
 
 	buff := new(bytes.Buffer)
 	indexTemplate.Execute(buff, subscriptions)
 
-	err = os.WriteFile("/tmp/podfeeds/index.html", buff.Bytes(), 0644)
+	err = os.WriteFile("_site/index.html", buff.Bytes(), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
-	podcastCachingChannel <- 1
 }
 
 func handlePodcast(w http.ResponseWriter, r *http.Request) {
@@ -332,6 +328,7 @@ func help() {
 
 func build() {
 	fmt.Println("building")
+	renderIndex()
 }
 
 func serve() {
@@ -372,7 +369,7 @@ func main() {
 	defer watcher.Close()
 
 	podcastCachingChannel <- 1
-	go CacheSubscriptions()
+	go renderIndex()
 
 	http.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("bamboo/dist"))))
 
