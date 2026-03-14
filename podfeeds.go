@@ -328,6 +328,23 @@ func handlePodcast(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
+	if len(os.Args) != 2 {
+		fmt.Println("Usage: podfeeds (build|serve)")
+		return
+	}
+
+	switch os.Args[1] {
+	case "build":
+		fmt.Println("building")
+		return
+	case "serve":
+		fmt.Println("serving")
+		return
+	default:
+		fmt.Println("Usage: podfeeds (build|serve)")
+		return
+	}
+
 	// We just leave this directory around. Sorry.
 	// https://groups.google.com/g/golang-nuts/c/vDd72SHUnbQ/m/Kj0xOa0AAQAJ
 	_, err := os.Stat("/tmp/podfeeds")

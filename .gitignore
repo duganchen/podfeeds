@@ -15,5 +15,5 @@
 # vendor/
 
 podcasts.yaml
-cache.sqlite3
 podfeeds
+_site/index.html
