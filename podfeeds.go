@@ -365,7 +365,14 @@ func build() error {
 		subscriptions[i] = Subscription{parsed.Title, renderedPodcastUrl}
 	}
 
-	return nil
+	indexTemplate2 := template.Must(template.ParseFiles("templates/index.html"))
+	buff := new(bytes.Buffer)
+	err = indexTemplate2.Execute(buff, subscriptions)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile("_site/index.html", buff.Bytes(), 0644)
 }
 
 func serve() {
