@@ -348,13 +348,12 @@ func build() error {
 	// validated for duplicate feeds. I'm going to forego both for now.
 
 	subscriptions := make([]Subscription, len(feeds))
-	fmt.Println(subscriptions)
 
 	fp := gofeed.NewParser()
 
+	podcastTemplate2 := template.Must(template.ParseFiles("./templates/podcast.html"))
+
 	for i, feed := range feeds {
-		fmt.Println(feed)
-		renderedPodcastUrl := fmt.Sprintf("podcasts/%s.html", base64.StdEncoding.EncodeToString(([]byte(feed))))
 
 		// This works well. Just using http.Get breaks with CBC Your World Tonight
 		parsed, err := fp.ParseURL(feed)
@@ -362,7 +361,80 @@ func build() error {
 			return err
 		}
 
-		subscriptions[i] = Subscription{parsed.Title, renderedPodcastUrl}
+		renderedPodcastFilename := fmt.Sprintf("%s.html", base64.StdEncoding.EncodeToString(([]byte(feed))))
+
+		renderedPodcastHtmlPath := fmt.Sprintf("podcasts/%s", renderedPodcastFilename)
+
+		subscriptions[i] = Subscription{parsed.Title, renderedPodcastHtmlPath}
+
+		var podcast Podcast
+		podcast.Language = parsed.Language
+
+		podcast.Title = parsed.Title
+		podcast.Description = parsed.Description
+
+		for _, parsedItem := range parsed.Items {
+			var item Item
+			item.Description = parsedItem.Description
+			item.Title = parsedItem.Title
+
+			item.GUID = parsedItem.GUID
+
+			podcast.ToC = append(podcast.ToC, ToCEntry{item.GUID, item.Title})
+
+			for _, enclosure := range parsedItem.Enclosures {
+				item.Enclosures = append(item.Enclosures, Enclosure{enclosure.URL, enclosure.Type})
+			}
+
+			if parsedItem.UpdatedParsed != nil {
+				item.Metadata = append(item.Metadata, Metadata{"Updated", parsedItem.UpdatedParsed.Format(time.RFC822)})
+			}
+
+			if parsedItem.PublishedParsed != nil {
+				item.Metadata = append(item.Metadata, Metadata{"Published", parsedItem.PublishedParsed.Format(time.RFC822)})
+			}
+
+			// Skipping "Content". In the feed where I saw it, it has the same content as the
+			// description.
+
+			if len(parsedItem.Authors) > 0 {
+				var authorsBuilder strings.Builder
+				for _, author := range parsedItem.Authors {
+					if author.Name != "" {
+						authorsBuilder.WriteString(author.Name)
+					}
+
+					if author.Name != "" && author.Email != "" {
+						authorsBuilder.WriteString(" (")
+					}
+
+					if author.Email != "" {
+						authorsBuilder.WriteString(author.Email)
+					}
+
+					if author.Name != "" && author.Email != "" {
+						authorsBuilder.WriteString(")")
+					}
+
+					authorsBuilder.WriteString(" ")
+				}
+				item.Metadata = append(item.Metadata, Metadata{"Authors", authorsBuilder.String()})
+			}
+
+			podcast.Items = append(podcast.Items, item)
+		}
+
+		if len(podcast.ToC) == 1 {
+			podcast.ToC = nil
+		}
+
+		renderedPodcastFilePath := fmt.Sprintf("_site/%s", renderedPodcastHtmlPath)
+		renderedPodcastFile, err := os.Create(renderedPodcastFilePath)
+		if err != nil {
+			return err
+		}
+		podcastTemplate2.Execute(renderedPodcastFile, podcast)
+		defer renderedPodcastFile.Close()
 	}
 
 	indexTemplate2 := template.Must(template.ParseFiles("templates/index.html"))
