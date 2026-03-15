@@ -18,7 +18,7 @@
     {{ if .ToC }}
     <nav>
         <h2>Episodes</h2>
-        <ul reversed>
+        <ul>
             {{ range .ToC }}
             <li>
                 <a href="#{{ .GUID }}">{{ .Title }}</a>
@@ -31,24 +31,26 @@
     {{ range .Items }}
     <h2 id="{{ .GUID }}">{{ .Title }}</h2>
 
-    {{ range .Enclosures }}
-    <p>
-        <a href="{{ .URL }}">Enclosure</a>
-    </p>
-    {{ end }}
-
-    <div>
-        {{ .Description }}
-    </div>
-
     <table>
         {{ range .Metadata }}
         <tr>
-            <td>{{ .Key }}</td>
+            <th>{{ .Key }}</th>
             <td>{{ .Value }}</td>
         </tr>
         {{ end }}
     </table>
+
+    <ul>
+    {{ range .Enclosures }}
+    <li>
+        <a href="{{ .URL }}">{{ .URL }}</a>
+    </li>
+    {{ end }}
+    </ul>
+
+    <div>
+        {{ .Description }}
+    </div>
 
     {{ end }}
 
