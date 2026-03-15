@@ -329,10 +329,12 @@ func help() {
 }
 
 func build() error {
-	_ = os.Remove("_site/index.html")
-	htmls, _ := filepath.Glob("_site/podcasts/*.html")
+	htmls, _ := filepath.Glob("_site/*.html")
 	for _, html := range htmls {
-		_ = os.Remove(html)
+		err := os.Remove(html)
+		if err != nil {
+			return err
+		}
 	}
 
 	feeds := make([]string, 0)
@@ -363,9 +365,7 @@ func build() error {
 
 		renderedPodcastFilename := fmt.Sprintf("%s.html", base64.StdEncoding.EncodeToString(([]byte(feed))))
 
-		renderedPodcastHtmlPath := fmt.Sprintf("podcasts/%s", renderedPodcastFilename)
-
-		subscriptions[i] = Subscription{parsed.Title, renderedPodcastHtmlPath}
+		subscriptions[i] = Subscription{parsed.Title, renderedPodcastFilename}
 
 		var podcast Podcast
 		podcast.Language = parsed.Language
@@ -428,7 +428,7 @@ func build() error {
 			podcast.ToC = nil
 		}
 
-		renderedPodcastFilePath := fmt.Sprintf("_site/%s", renderedPodcastHtmlPath)
+		renderedPodcastFilePath := fmt.Sprintf("_site/%s", renderedPodcastFilename)
 		renderedPodcastFile, err := os.Create(renderedPodcastFilePath)
 		if err != nil {
 			return err
