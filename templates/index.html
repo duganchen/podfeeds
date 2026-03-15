@@ -5,17 +5,15 @@
     <meta charset=utf-8>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Podcasts</title>
-    <link rel="stylesheet" href="/css/bamboo.min.css">
+    <link rel="stylesheet" href="bamboo/dist/bamboo.min.css">
 </head>
 
 <body>
     <h1>Podcasts</h1>
     <ul>
-        {{ range . }}
-        <li>
+        {{ range . }}<li>
             <a href="{{ .Url }}">{{ .Title }}</a>
-        </li>
-        {{ end }}
+        </li>{{ end }}
     </ul>
 </body>
 
