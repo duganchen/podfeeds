@@ -447,8 +447,11 @@ func build() error {
 	return os.WriteFile("_site/index.html", buff.Bytes(), 0644)
 }
 
-func serve() {
-	fmt.Println("serving")
+func serve() error {
+	// Just copying this
+	fs2 := http.FileServer(http.Dir("_site"))
+	http.Handle("/", fs2)
+	return http.ListenAndServe(":8080", nil)
 }
 
 func main() {
