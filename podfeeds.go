@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"text/template"
@@ -326,9 +328,44 @@ func help() {
 	fmt.Println("Usage: podfeeds (build|serve)")
 }
 
-func build() {
-	fmt.Println("building")
-	renderIndex()
+func build() error {
+	_ = os.Remove("_site/index.html")
+	htmls, _ := filepath.Glob("_site/podcasts/*.html")
+	for _, html := range htmls {
+		_ = os.Remove(html)
+	}
+
+	feeds := make([]string, 0)
+
+	buf, err := os.ReadFile("./podcasts.yaml")
+	yaml.Unmarshal(buf, &feeds)
+
+	if err != nil {
+		return err
+	}
+
+	// Previous versions fetched and rendered feeds in parallel, and also
+	// validated for duplicate feeds. I'm going to forego both for now.
+
+	subscriptions := make([]Subscription, len(feeds))
+	fmt.Println(subscriptions)
+
+	fp := gofeed.NewParser()
+
+	for i, feed := range feeds {
+		fmt.Println(feed)
+		renderedPodcastUrl := fmt.Sprintf("podcasts/%s.html", base64.StdEncoding.EncodeToString(([]byte(feed))))
+
+		// This works well. Just using http.Get breaks with CBC Your World Tonight
+		parsed, err := fp.ParseURL(feed)
+		if err != nil {
+			return err
+		}
+
+		subscriptions[i] = Subscription{parsed.Title, renderedPodcastUrl}
+	}
+
+	return nil
 }
 
 func serve() {
@@ -344,7 +381,10 @@ func main() {
 
 	switch os.Args[1] {
 	case "build":
-		build()
+		err := build()
+		if err != nil {
+			log.Fatal(err)
+		}
 		return
 	case "serve":
 		serve()
