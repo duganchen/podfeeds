@@ -451,7 +451,31 @@ func serve() error {
 	// Just copying this
 	fs2 := http.FileServer(http.Dir("_site"))
 	http.Handle("/", fs2)
-	return http.ListenAndServe(":8080", nil)
+
+	port, set := os.LookupEnv("PORT")
+
+	if set && port == "0" {
+		/* The Port 0 implementation is from here:
+		https://youtu.be/bYSo78dwgH8
+		*/
+		l, err := net.Listen("tcp", ":0")
+		if err != nil {
+			return err
+		}
+
+		freePort := l.Addr().(*net.TCPAddr).Port
+		fmt.Printf("Using port: %d\n", freePort)
+
+		return http.Serve(l, nil)
+	}
+
+	if !set {
+		port = "8080"
+	}
+
+	fmt.Printf("Using port: %s\n", port)
+
+	return http.ListenAndServe(fmt.Sprintf(":%s", port), nil)
 }
 
 func main() {
@@ -469,7 +493,10 @@ func main() {
 		}
 		return
 	case "serve":
-		serve()
+		err := serve()
+		if err != nil {
+			log.Fatal(err)
+		}
 		return
 	default:
 		help()

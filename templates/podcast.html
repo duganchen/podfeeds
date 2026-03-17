@@ -16,16 +16,13 @@
     </div>
 
     {{ if .ToC }}
-    <nav>
-        <h2>Episodes</h2>
-        <ul>
-            {{ range .ToC }}
-            <li>
-                <a href="#{{ .GUID }}">{{ .Title }}</a>
-            </li>
-            {{ end }}
-        </ul>
-    </nav>
+    <ul>
+        {{ range .ToC }}
+        <li>
+            <a href="#{{ .GUID }}">{{ .Title }}</a>
+        </li>
+        {{ end }}
+    </ul>
     {{ end }}
 
     {{ range .Items }}
@@ -43,7 +40,7 @@
     <ul>
     {{ range .Enclosures }}
     <li>
-        <a href="{{ .URL }}">{{ .URL }}</a>
+        <a href="{{ .URL }}">Enclosure</a>
     </li>
     {{ end }}
     </ul>
