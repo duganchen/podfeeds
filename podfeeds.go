@@ -221,15 +221,12 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		break
 	case "serve":
 		err := serve()
 		if err != nil {
 			log.Fatal(err)
 		}
-		break
 	default:
 		help()
-		break
 	}
 }
