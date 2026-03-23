@@ -1,15 +1,20 @@
 # podfeeds
 
-![demo](images/usage.gif)
-
-This is an HTTP server-based podcast aggregator. Just as other aggregators use Chrome to present a GUI, this one uses Lynx to present a TUI.
+This is a podcast aggregator. Just as other aggregators use Chrome to present a GUI, this one uses Lynx to present a TUI.
 
 ## Setting Up Lynx
 
-On some systems, you will need to [build Lynx yourself](https://www.linuxfromscratch.org/blfs/view/svn/basicnet/lynx.html)
+On some systems, you will need to [build Lynx yourself](https://linuxfromscratch.org/blfs/view/stable-systemd/basicnet/lynx.html)
 to achieve this setup. After applying any patches from the previous link, the following configuration will give you a user-level installation with everything you need:
 
     ./configure --prefix=$HOME/.local --enable-externs --with-zlib --with-bzlib --with-ssl --with-screen=ncursesw --enable-locale-charset --enable-default-colors
+    make
+    make install
+
+That puts Lynx in ~/.local/bin. Put the source directory in ~/.local/src so that you can "make uninstall" in it. The configuration directory, containing lynx.cfg and lynx.lss, are in ~/.local/etc.
+
+The key flag here is --enable-externs, which is needed to enable downloading
+with a download manager.
 
 Set Lynx up to open media files in your favorite media player. For example, I have the following ~/.mailcap to get Lynx to open them in [mpv](https://mpv.io/):
 
@@ -22,6 +27,8 @@ Setting Lynx to always accept cookies will also save a few manual steps. Set the
     FORCE_SSL_COOKIES_SECURE:TRUE
     SET_COOKIES:TRUE
     ACCEPT_ALL_COOKIES:TRUE
+
+There's a fairly obvious section in lynx.lss to make it work with transparent terminals. You'll probably want to set that.
 
 ### Downloading Podcasts
 
@@ -57,9 +64,18 @@ Separate each line with a hyphen and a space, and use # for comments. For exampl
     - https://www.cbc.ca/podcasting/includes/asithappens.xml
     - https://www.cbc.ca/podcasting/includes/cbcpowerandpolitics.xml
 
-## Running Podfeeds
+## Building And Serving
 
-    ./podfeeds
+Podfeeds is functionally a static site generator. Do the following with the
+repository as the current directory:
+
+    ./podfeeds build
+
+That builds the site to _site.
+
+Then, to serve it:
+
+    ./podfeeds serve
 
 By default, the server will listen on port 8080. Set the PORT environment variable to override it. Set it to port 0 to let it pick
 the port.
@@ -70,8 +86,8 @@ Load the server's index page in Lynx:
 
 ## Using Podfeeds
 
-Podfeeds is structured as an old-fashioned, Lynx-friendly website. There's a landing page at "/" with a link for each subscription.
-Each of those links goes to a page. That page is an HTML rendering of the podcast's XML file, with a table of contents
+Your podcasts are rendered into an old-fashioned, Lynx-friendly website. There's a landing page at "/" with a link for each subscription.
+Each of those links goes to a page. That page is an HTML conversion of the podcast's XML file, with a table of contents
 at the top. Each entry in the table of contents is an episode.
 
 You start on the list of podcasts you're subscribed to.
@@ -88,32 +104,4 @@ Use the table of contents to jump to episodes. Press Ctrl+A to jump back to the 
 
 Follow "Enclosure" links to play them.
 
-![Playing](images/playing.png)
-
 Or press "." to download them with HTTPie.
-
-## Docker
-
-In the repository directory, write your podcasts.yaml file.
-
-Build the podfeeds image. Pull the nginx image.
-
-    docker build -t podfeeds .
-    docker pull nginx
-
-Create a volume for the persistent nginx cache:
-
-    docker volume create podfeeds_cache
-
-And then bring the whole thing up:
-
-    docker compose up -d
-
-Browse your podcasts at http://localhost:8081.
-
-And then tear it down;
-
-    docker compose down
-
-Why nginx? Lynx and w3m don't have browser caches, so we put nginx in
-front of podfeeds to fill that role.
