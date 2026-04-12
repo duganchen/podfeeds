@@ -144,3 +144,5 @@ Works the same as above. This is accompished with the following layout:
             focus true
         }
     }
+
+Exiting Zellij (Ctrl+q) tears everything down.
