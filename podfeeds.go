@@ -198,8 +198,8 @@ func build() error {
 		return err
 	}
 
-	// Clear the spinner.
-	fmt.Print("\r")
+	// Clear the spinner. Thank you, AI.
+	fmt.Print("\r                 \r")
 
 	htmls, _ := filepath.Glob("_site/*.html")
 	for _, html := range htmls {
