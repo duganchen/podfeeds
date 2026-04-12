@@ -88,11 +88,11 @@ You start on the list of podcasts you're subscribed to.
 
 ![Subscriptions](images/subscriptions.png)
 
-Following each link gets you the page for that podcast. The page starts with anchor links to specific episodes.
+Following a link gets you the page for that podcast. The page starts with anchor links to specific episodes.
 
 ![Episode List](images/toc.png)
 
-Use the table of contents to jump to episodes. Press Ctrl+A to jump back to the beginning of the page, where the table of contents is.
+Use the table of contents to jump to episodes. Press Ctrl+A to jump to the beginning of the page, where the table of contents is.
 
 ![Episode](images/episode.png)
 
@@ -100,12 +100,11 @@ Follow "Enclosure" links to play them.
 
 Or press "." to download them with HTTPie.
 
-
 ## Automating Podfeeds
 
 Behold my tmux session!
 
 Refreshing is an UP-key in the top left pane to recall the command line that builds the site, and then sends
-the refresh key sequence to the Lynx pane. Lynx is started in ~/Music/podcasts, so episodes I download with "." go directly there. I think that's reasonably efficient.
+the refresh key sequence to the Lynx pane. Lynx is started in ~/Music/podcasts, so episodes I download with "." go directly there. I think that's reasonably efficient user experience.
 
 ![tmux session](images/tmux_session.png)
