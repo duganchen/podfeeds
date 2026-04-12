@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -55,11 +56,27 @@ type Podcast struct {
 	ToC []ToCEntry
 }
 
+// No I am not going to use a library for this
+type Spinner struct {
+	index  int
+	frames string
+	count  int
+	mutex  sync.Mutex
+}
+
+// I admit that this is from AI
+func NewSpinner() *Spinner {
+	// AI also suggested this. Which, being UTF-8, is a bit more complicated to implement.
+	// "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+
+	return &Spinner{index: 0, frames: "-\\|/", count: 4}
+}
+
 func help() {
 	fmt.Println("Usage: podfeeds (build|serve)")
 }
 
-func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemplate *template.Template, fp *gofeed.Parser) func() error {
+func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemplate *template.Template, fp *gofeed.Parser, spinner *Spinner) func() error {
 
 	return func() error {
 
@@ -141,6 +158,12 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemp
 		}
 		podcastTemplate.Execute(renderedPodcastFile, podcast)
 		defer renderedPodcastFile.Close()
+
+		spinner.mutex.Lock()
+		fmt.Printf("\r	%c", spinner.frames[spinner.index])
+		// Every CS student knows this pattern
+		spinner.index = (spinner.index + 1) % spinner.count
+		spinner.mutex.Unlock()
 		return nil
 	}
 }
@@ -165,14 +188,18 @@ func build() error {
 	os.Mkdir("_site.tmp", 0755)
 
 	g := new(errgroup.Group)
+	spinner := NewSpinner()
 	for i, feed := range feeds {
-		g.Go(fetchFeed(feed, subscriptions, i, podcastTemplate, fp))
+		g.Go(fetchFeed(feed, subscriptions, i, podcastTemplate, fp, spinner))
 	}
 
 	err = g.Wait()
 	if err != nil {
 		return err
 	}
+
+	// Clear the spinner.
+	fmt.Print("\r")
 
 	htmls, _ := filepath.Glob("_site/*.html")
 	for _, html := range htmls {
