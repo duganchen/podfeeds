@@ -155,9 +155,6 @@ func build() error {
 		return err
 	}
 
-	// Previous versions fetched and rendered feeds in parallel, and also
-	// validated for duplicate feeds. I'm going to forego both for now.
-
 	subscriptions := make([]Subscription, len(feeds))
 
 	fp := gofeed.NewParser()
