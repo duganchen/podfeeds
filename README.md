@@ -113,20 +113,18 @@ the refresh key sequence to the Lynx pane. Lynx is started in ~/Music/podcasts, 
 
 ### Zellij
 
-Zellij works too.
-
 ![zellij session](images/zellij_layout.png)
 
-Refreshing is ENTER twice in the top left pane, followed by Ctrl+r in the bottom pane. Exiting Zellij (Ctrl+q) tears everything down.
-
-This is accompished with the following layout:
+Works the same as above. This is accompished with the following layout:
 
     layout {
         pane split_direction="horizontal" {
             pane split_direction="vertical" {
                 pane {
-                    command "./podfeeds"
-                    args "build"
+                    // https://www.reddit.com/r/zellij/comments/129mftu/in_zellij_it_it_possible_to_start_multiple/
+                    // I determined in a previous session that terminal_1 is the id of the Lynx pane.
+                    command "bash"
+                    args "-c" "./podfeeds build && zellij action send-keys --pane-id terminal_1 \"Ctrl r\""
                     cwd "~/Documents/podfeeds"
                     start_suspended true
                 }
@@ -141,6 +139,8 @@ This is accompished with the following layout:
         pane command="lynx" {
             args "http://localhost:8080"
             cwd "~/Music/podcasts"
+            // Not safe to start the browser and the server at the exact same time
+            start_suspended true
+            focus true
         }
     }
-
