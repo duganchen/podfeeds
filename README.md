@@ -82,9 +82,7 @@ Load the server's index page in Lynx:
 
 ## Using Podfeeds
 
-Your podcasts are rendered into an old-fashioned, Lynx-friendly website. There's a landing page at "/" with a link for each subscription.
-Each of those links goes to a page. That page is an HTML conversion of the podcast's XML file, with a table of contents
-at the top. Each entry in the table of contents is an episode.
+Your podcasts are rendered into an old-fashioned, Lynx-friendly website. There's a landing page at "/" with a link for each subscription. Each of those links goes to a page. That page is an HTML conversion of the podcast's XML file, with a table of contents at the top. Each entry in the table of contents is an episode.
 
 You start on the list of podcasts you're subscribed to.
 
