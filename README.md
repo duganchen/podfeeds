@@ -111,6 +111,7 @@ Or press "." to download them with HTTPie.
 
 Behold my tmux session!
 
-Refreshing is an UP-key in the top left pane to recall the build command, and then a Ctrl+r in the bottom pane to refresh Lynx. Lynx is started in ~/Music/podcasts, so episodes I download with "." go directly there. I think that's reasonably efficient.
+Refreshing is an UP-key in the top left pane to recall the command line that builds the site, and then sends
+the refresh key sequence to the Lynx pane. Lynx is started in ~/Music/podcasts, so episodes I download with "." go directly there. I think that's reasonably efficient.
 
 ![tmux session](images/tmux_session.png)
