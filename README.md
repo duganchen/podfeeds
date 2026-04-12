@@ -96,12 +96,22 @@ You start on the list of podcasts you're subscribed to.
 
 Following each link gets you the page for that podcast. The page starts with anchor links to specific episodes.
 
-![As It Happens](images/toc.png)
+![Episode List](images/toc.png)
 
 Use the table of contents to jump to episodes. Press Ctrl+A to jump back to the beginning of the page, where the table of contents is.
 
-![As It Happens](images/episode.png)
+![Episode](images/episode.png)
 
 Follow "Enclosure" links to play them.
 
 Or press "." to download them with HTTPie.
+
+
+## Automating Podfeeds
+
+Behold my tmux session!
+
+Refreshing is an UP-key in the top left pane to recall the build command, and then a Ctrl+r in the bottom pane to refresh Lynx. Lynx is started in ~/Music/podcasts, so episodes I download with "." go directly there. When I start
+the session with "tmux -a -t podcasts", it just starts serving, and then I detach from it with Ctrl+b followed by d, it stops. I think that's reasonably efficient.
+
+![tmux session](images/tmux_session.png)
