@@ -134,7 +134,7 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemp
 			podcast.ToC = nil
 		}
 
-		renderedPodcastFilePath := fmt.Sprintf("_site/%s", renderedPodcastFilename)
+		renderedPodcastFilePath := fmt.Sprintf("_site.tmp/%s", renderedPodcastFilename)
 		renderedPodcastFile, err := os.Create(renderedPodcastFilePath)
 		if err != nil {
 			return err
@@ -146,14 +146,6 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemp
 }
 
 func build() error {
-	htmls, _ := filepath.Glob("_site/*.html")
-	for _, html := range htmls {
-		err := os.Remove(html)
-		if err != nil {
-			return err
-		}
-	}
-
 	feeds := make([]string, 0)
 
 	buf, err := os.ReadFile("./podcasts.yaml")
@@ -172,6 +164,9 @@ func build() error {
 
 	podcastTemplate := template.Must(template.ParseFiles("./templates/podcast.html"))
 
+	os.RemoveAll("_site.tmp")
+	os.Mkdir("_site.tmp", 0755)
+
 	g := new(errgroup.Group)
 	for i, feed := range feeds {
 		g.Go(fetchFeed(feed, subscriptions, i, podcastTemplate, fp))
@@ -181,6 +176,25 @@ func build() error {
 	if err != nil {
 		return err
 	}
+
+	htmls, _ := filepath.Glob("_site/*.html")
+	for _, html := range htmls {
+		err := os.Remove(html)
+		if err != nil {
+			return err
+		}
+	}
+
+	htmls, _ = filepath.Glob("_site.tmp/*.html")
+	for _, html := range htmls {
+		err := os.Rename(html, fmt.Sprintf("_site/%s", filepath.Base(html)))
+		if err != nil {
+			return err
+		}
+	}
+
+	os.RemoveAll("_site.tmp")
+
 	indexTemplate := template.Must(template.ParseFiles("templates/index.html"))
 	buff := new(bytes.Buffer)
 	err = indexTemplate.Execute(buff, subscriptions)
