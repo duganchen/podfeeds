@@ -102,9 +102,45 @@ Or press "." to download them with HTTPie.
 
 ## Automating Podfeeds
 
+### tmux
+
 Behold my tmux session!
 
 Refreshing is an UP-key in the top left pane to recall the command line that builds the site, and then sends
 the refresh key sequence to the Lynx pane. Lynx is started in ~/Music/podcasts, so episodes I download with "." go directly there. I think that's reasonably efficient user experience.
 
 ![tmux session](images/tmux_session.png)
+
+### Zellij
+
+Zellij works too.
+
+![zellij session](images/zellij_layout.png)
+
+Refreshing is ENTER twice in the top left pane, followed by Ctrl+r in the bottom pane. Exiting Zellij (Ctrl+q) tears everything down.
+
+This is accompished with the following layout:
+
+    layout {
+        pane split_direction="horizontal" {
+            pane split_direction="vertical" {
+                pane {
+                    command "./podfeeds"
+                    args "build"
+                    cwd "~/Documents/podfeeds"
+                    start_suspended true
+                }
+                pane {
+                    command "./podfeeds"
+                    args "serve"
+                    cwd "~/Documents/podfeeds"
+                }
+
+            }
+        }
+        pane command="lynx" {
+            args "http://localhost:8080"
+            cwd "~/Music/podcasts"
+        }
+    }
+
