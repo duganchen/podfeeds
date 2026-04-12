@@ -50,10 +50,7 @@ use the "podfeed" script I posted here:
 [CLI app to get podcast feed URLs
 ](https://www.linuxquestions.org/questions/linuxquestions-org-member-success-stories-23/cli-app-to-get-podcast-feed-urls-4175656322/#post6363987)
 
-Paste them into a file named podcasts.yaml, in one of the following locations:
-
-* in the same directory as the podfeeds executable
-* in /etc/podfeeds/
+Paste them into a file named podcasts.yaml, in the repository directory (same directory as the podfeeds executable).
 
 Separate each line with a hyphen and a space, and use # for comments. For example:
 
