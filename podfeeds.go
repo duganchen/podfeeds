@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/mmcdole/gofeed"
+	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 )
 
@@ -58,34 +59,9 @@ func help() {
 	fmt.Println("Usage: podfeeds (build|serve)")
 }
 
-func build() error {
-	htmls, _ := filepath.Glob("_site/*.html")
-	for _, html := range htmls {
-		err := os.Remove(html)
-		if err != nil {
-			return err
-		}
-	}
+func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemplate *template.Template, fp *gofeed.Parser) func() error {
 
-	feeds := make([]string, 0)
-
-	buf, err := os.ReadFile("./podcasts.yaml")
-	yaml.Unmarshal(buf, &feeds)
-
-	if err != nil {
-		return err
-	}
-
-	// Previous versions fetched and rendered feeds in parallel, and also
-	// validated for duplicate feeds. I'm going to forego both for now.
-
-	subscriptions := make([]Subscription, len(feeds))
-
-	fp := gofeed.NewParser()
-
-	podcastTemplate2 := template.Must(template.ParseFiles("./templates/podcast.html"))
-
-	for i, feed := range feeds {
+	return func() error {
 
 		// This works well. Just using http.Get breaks with CBC Your World Tonight
 		parsed, err := fp.ParseURL(feed)
@@ -95,7 +71,7 @@ func build() error {
 
 		renderedPodcastFilename := fmt.Sprintf("%s.html", base64.StdEncoding.EncodeToString(([]byte(feed))))
 
-		subscriptions[i] = Subscription{parsed.Title, renderedPodcastFilename}
+		subscriptions[index] = Subscription{parsed.Title, renderedPodcastFilename}
 
 		var podcast Podcast
 		podcast.Language = parsed.Language
@@ -163,13 +139,51 @@ func build() error {
 		if err != nil {
 			return err
 		}
-		podcastTemplate2.Execute(renderedPodcastFile, podcast)
+		podcastTemplate.Execute(renderedPodcastFile, podcast)
 		defer renderedPodcastFile.Close()
+		return nil
+	}
+}
+
+func build() error {
+	htmls, _ := filepath.Glob("_site/*.html")
+	for _, html := range htmls {
+		err := os.Remove(html)
+		if err != nil {
+			return err
+		}
 	}
 
-	indexTemplate2 := template.Must(template.ParseFiles("templates/index.html"))
+	feeds := make([]string, 0)
+
+	buf, err := os.ReadFile("./podcasts.yaml")
+	yaml.Unmarshal(buf, &feeds)
+
+	if err != nil {
+		return err
+	}
+
+	// Previous versions fetched and rendered feeds in parallel, and also
+	// validated for duplicate feeds. I'm going to forego both for now.
+
+	subscriptions := make([]Subscription, len(feeds))
+
+	fp := gofeed.NewParser()
+
+	podcastTemplate := template.Must(template.ParseFiles("./templates/podcast.html"))
+
+	g := new(errgroup.Group)
+	for i, feed := range feeds {
+		g.Go(fetchFeed(feed, subscriptions, i, podcastTemplate, fp))
+	}
+
+	err = g.Wait()
+	if err != nil {
+		return err
+	}
+	indexTemplate := template.Must(template.ParseFiles("templates/index.html"))
 	buff := new(bytes.Buffer)
-	err = indexTemplate2.Execute(buff, subscriptions)
+	err = indexTemplate.Execute(buff, subscriptions)
 	if err != nil {
 		return err
 	}
