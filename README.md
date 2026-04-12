@@ -74,8 +74,7 @@ Then, to serve it:
 
     ./podfeeds serve
 
-By default, the server will listen on port 8080. Set the PORT environment variable to override it. Set it to port 0 to let it pick
-the port.
+By default, the server will listen on port 8080. Set the PORT environment variable to override it. Set it to port 0 to let it pick the port.
 
 Load the server's index page in Lynx:
 
