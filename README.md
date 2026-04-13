@@ -4,18 +4,6 @@ This is a podcast aggregator. Just as other aggregators use Chrome to present a 
 
 ## Setting Up Lynx
 
-On some systems, you will need to [build Lynx yourself](https://linuxfromscratch.org/blfs/view/stable-systemd/basicnet/lynx.html)
-to achieve this setup. After applying any patches from the previous link, the following configuration will give you a user-level installation with everything you need:
-
-    ./configure --prefix=$HOME/.local --enable-externs --with-zlib --with-bzlib --with-ssl --with-screen=ncursesw --enable-locale-charset --enable-default-colors
-    make
-    make install
-
-That puts Lynx in ~/.local/bin. Put the source directory in ~/.local/src so that you can "make uninstall" in it. The configuration directory, containing lynx.cfg and lynx.lss, are in ~/.local/etc.
-
-The key flag here is --enable-externs, which is needed to enable downloading
-with a download manager.
-
 Set Lynx up to open media files in your favorite media player. For example, I have the following ~/.mailcap to get Lynx to open them in [mpv](https://mpv.io/):
 
     audio/*; mpv %s
@@ -102,20 +90,17 @@ Or press "." to download them with HTTPie.
 
 ## Automating Podfeeds
 
-### tmux
-
-Behold my tmux session!
+Behold my [Zellij](https://zellij.dev/) layout!
 
 Refreshing is an UP-key in the top left pane to recall the command line that builds the site, and then sends
-the refresh key sequence to the Lynx pane. Lynx is started in ~/Music/podcasts, so episodes I download with "." go directly there. I think that's reasonably efficient user experience.
+the refresh key sequence to the Lynx pane. Lynx is started in ~/Music/podcasts, so episodes I download with "." go directly there.
+Exiting Zellij (Ctrl+q) tears everything down.
 
-![tmux session](images/tmux_session.png)
-
-### Zellij
+A separate web server and browser are cool, but this is the user experience I'm actually going for.
 
 ![zellij session](images/zellij_layout.png)
 
-Works the same as above. This is accompished with the following layout:
+Here is the KDL source code for the layout:
 
     layout {
         pane split_direction="horizontal" {
@@ -145,4 +130,17 @@ Works the same as above. This is accompished with the following layout:
         }
     }
 
-Exiting Zellij (Ctrl+q) tears everything down.
+## Appendix: Building Lynx
+
+Lynx needs to be built with --enable-externs, which is needed to enable downloading
+with a download manager.
+
+On some systems, you will need to [build Lynx yourself](https://linuxfromscratch.org/blfs/view/stable-systemd/basicnet/lynx.html)
+in order to have that. After applying any patches from the previous link, the following configuration will give you a user-level installation with everything you need:
+
+    ./configure --prefix=$HOME/.local --enable-externs --with-zlib --with-bzlib --with-ssl --with-screen=ncursesw --enable-locale-charset --enable-default-colors
+    make
+    make install
+
+That puts Lynx in ~/.local/bin. Put the source directory in ~/.local/src so that you can "make uninstall" in it. The configuration directory, containing lynx.cfg and lynx.lss, are in ~/.local/etc.
+
