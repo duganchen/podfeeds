@@ -184,7 +184,12 @@ func build() error {
 
 	podcastTemplate := template.Must(template.ParseFiles("./templates/podcast.html"))
 
-	os.RemoveAll("_site.tmp")
+	stat, err := os.Stat("_site.tmp")
+	if stat.IsDir() {
+		fmt.Printf("A build is already in progress")
+		return nil
+	}
+
 	os.Mkdir("_site.tmp", 0755)
 
 	g := new(errgroup.Group)
