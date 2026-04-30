@@ -1,26 +1,32 @@
 # podfeeds
 
-This is a podcast aggregator. Just as other aggregators use Chrome to present a GUI, this one uses Lynx to present a TUI.
+This is a podcast aggregator. Just as other aggregators use Chrome to present a
+GUI, this one uses Lynx to present a TUI.
 
 ## Setting Up Lynx
 
-Set Lynx up to open media files in your favorite media player. For example, I have the following ~/.mailcap to get Lynx to open them in [mpv](https://mpv.io/):
+Set Lynx up to open media files in your favorite media player. For example, I
+have the following ~/.mailcap to get Lynx to open them in
+[mpv](https://mpv.io/):
 
     audio/*; mpv %s
     video/*; mpv %s
     application/vnd.rn-realmedia; mpv %s
 
-Setting Lynx to always accept cookies will also save a few manual steps. Set the following (make sure they're not commented out) in lynx.cfg:
+Setting Lynx to always accept cookies will also save a few manual steps. Set the
+following (make sure they're not commented out) in lynx.cfg:
 
     FORCE_SSL_COOKIES_SECURE:TRUE
     SET_COOKIES:TRUE
     ACCEPT_ALL_COOKIES:TRUE
 
-There's a fairly obvious section in lynx.lss to make it work with transparent terminals. You'll probably want to set that.
+There's a fairly obvious section in lynx.lss to make it work with transparent
+terminals. You'll probably want to set that.
 
 ### Downloading Podcasts
 
-Install [HTTPie](https://httpie.io/) and put the following in the EXTERNAL section of lynx.cfg:
+Install [HTTPie](https://httpie.io/) and put the following in the EXTERNAL
+section of lynx.cfg:
 
     EXTERNAL:https:http -d %s:TRUE
 
@@ -32,15 +38,16 @@ That will produce an executable named "podfeeds".
 
 ## Gathering Feed URLs
 
-Gather your podcast feed URLs. One way to find them is to
-use the "podfeed" script I posted here:
+Gather your podcast feed URLs. One way to find them is to use the "podfeed"
+script I posted here:
 
-[CLI app to get podcast feed URLs
-](https://www.linuxquestions.org/questions/linuxquestions-org-member-success-stories-23/cli-app-to-get-podcast-feed-urls-4175656322/#post6363987)
+[CLI app to get podcast feed URLs](https://www.linuxquestions.org/questions/linuxquestions-org-member-success-stories-23/cli-app-to-get-podcast-feed-urls-4175656322/#post6631493)
 
-Paste them into a file named podcasts.yaml, in the repository directory (same directory as the podfeeds executable).
+Paste them into a file named podcasts.yaml, in the repository directory (same
+directory as the podfeeds executable).
 
-Separate each line with a hyphen and a space, and use # for comments. For example:
+Separate each line with a hyphen and a space, and use # for comments. For
+example:
 
     - https://www.cbc.ca/podcasting/includes/wr.xml # CBC World Report
     - https://www.cbc.ca/podcasting/includes/frontburner.xml
@@ -62,7 +69,8 @@ Then, to serve it:
 
     ./podfeeds serve
 
-By default, the server will listen on port 8080. Set the PORT environment variable to override it. Set it to port 0 to let it pick the port.
+By default, the server will listen on port 8080. Set the PORT environment
+variable to override it. Set it to port 0 to let it pick the port.
 
 Load the server's index page in Lynx:
 
@@ -70,17 +78,23 @@ Load the server's index page in Lynx:
 
 ## Using Podfeeds
 
-Your podcasts are rendered into an old-fashioned, Lynx-friendly website. There's a landing page at "/" with a link for each subscription. Each of those links goes to a page. That page is an HTML conversion of the podcast's XML file, with a table of contents at the top. Each entry in the table of contents is an episode.
+Your podcasts are rendered into an old-fashioned, Lynx-friendly website. There's
+a landing page at "/" with a link for each subscription. Each of those links
+goes to a page. That page is an HTML conversion of the podcast's XML file, with
+a table of contents at the top. Each entry in the table of contents is an
+episode.
 
 You start on the list of podcasts you're subscribed to.
 
 ![Subscriptions](images/subscriptions.png)
 
-Following a link gets you the page for that podcast. The page starts with anchor links to specific episodes.
+Following a link gets you the page for that podcast. The page starts with anchor
+links to specific episodes.
 
 ![Episode List](images/toc.png)
 
-Use the table of contents to jump to episodes. Press Ctrl+A to jump to the beginning of the page, where the table of contents is.
+Use the table of contents to jump to episodes. Press Ctrl+A to jump to the
+beginning of the page, where the table of contents is.
 
 ![Episode](images/episode.png)
 
@@ -92,11 +106,13 @@ Or press "." to download them with HTTPie.
 
 Behold my [Zellij](https://zellij.dev/) layout!
 
-Refreshing is an UP-key in the top left pane to recall the command line that builds the site, and then sends
-the refresh key sequence to the Lynx pane. Lynx is started in ~/Music/podcasts, so episodes I download with "." go directly there.
-Exiting Zellij (Ctrl+q) tears everything down.
+Refreshing is an UP-key in the top left pane to recall the command line that
+builds the site, and then sends the refresh key sequence to the Lynx pane. Lynx
+is started in ~/Music/podcasts, so episodes I download with "." go directly
+there. Exiting Zellij (Ctrl+q) tears everything down.
 
-A separate web server and browser are cool, but this is the user experience I'm actually going for.
+A separate web server and browser are cool, but this is the user experience I'm
+actually going for.
 
 ![zellij session](images/zellij_layout.png)
 
@@ -132,15 +148,19 @@ Here is the KDL source code for the layout:
 
 ## Appendix: Building Lynx
 
-Lynx needs to be built with --enable-externs, which is needed to enable downloading
-with a download manager.
+Lynx needs to be built with --enable-externs, which is needed to enable
+downloading with a download manager.
 
-On some systems, you will need to [build Lynx yourself](https://linuxfromscratch.org/blfs/view/stable-systemd/basicnet/lynx.html)
-in order to have that. After applying any patches from the previous link, the following configuration will give you a user-level installation with everything you need:
+On some systems, you will need to
+[build Lynx yourself](https://linuxfromscratch.org/blfs/view/stable-systemd/basicnet/lynx.html)
+in order to have that. After applying any patches from the previous link, the
+following configuration will give you a user-level installation with everything
+you need:
 
     ./configure --prefix=$HOME/.local --enable-externs --with-zlib --with-bzlib --with-ssl --with-screen=ncursesw --enable-locale-charset --enable-default-colors
     make
     make install
 
-That puts Lynx in ~/.local/bin. Put the source directory in ~/.local/src so that you can "make uninstall" in it. The configuration directory, containing lynx.cfg and lynx.lss, are in ~/.local/etc.
-
+That puts Lynx in ~/.local/bin. Put the source directory in ~/.local/src so that
+you can "make uninstall" in it. The configuration directory, containing lynx.cfg
+and lynx.lss, are in ~/.local/etc.
