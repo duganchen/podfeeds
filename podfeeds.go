@@ -185,7 +185,7 @@ func build() error {
 	podcastTemplate := template.Must(template.ParseFiles("./templates/podcast.html"))
 
 	_, err = os.Stat("_site.tmp")
-	if err != nil {
+	if err == nil {
 		fmt.Printf("A build is already in progress")
 		return nil
 	}
