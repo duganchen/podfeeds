@@ -80,8 +80,27 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemp
 
 	return func() error {
 
-		// This works well. Just using http.Get breaks with CBC Your World Tonight
-		parsed, err := fp.ParseURL(feed)
+		// Setting the user agent does turn out to be necessary sometimes
+
+		req, err := http.NewRequest(http.MethodGet, feed, nil)
+		if err != nil {
+			return err
+		}
+		req.Header.Set("User-Agent", "Mozilla/5.0")
+
+		client := &http.Client{
+			Timeout: 15 * time.Second,
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		parser := gofeed.NewParser()
+
+		parsed, err := parser.Parse(resp.Body)
 		if err != nil {
 			return err
 		}
