@@ -301,6 +301,14 @@ func main() {
 	case "build":
 		err := build()
 		if err != nil {
+			stat, err := os.Stat("_site.tmp")
+			if err != nil && stat.IsDir() {
+				err = os.RemoveAll("_site.tmp")
+				// I hope it doesn't get here
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
 			log.Fatal(err)
 		}
 	case "serve":
