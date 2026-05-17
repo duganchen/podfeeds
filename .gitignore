@@ -16,4 +16,5 @@
 
 podcasts.yaml
 podfeeds
-_site/index.html
+_site/*.html
+_site.tmp

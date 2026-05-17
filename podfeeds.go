@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -254,6 +255,11 @@ func build() error {
 }
 
 func serve() error {
+	_, err := os.Stat("_site/index.html")
+	if err != nil {
+		return errors.New("Site is not built.")
+	}
+
 	// Just copying this
 	fs2 := http.FileServer(http.Dir("_site"))
 	http.Handle("/", fs2)
