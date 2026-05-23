@@ -55,6 +55,7 @@ example:
 
 Use the included scripts/podfeed script (and its helper _podfeed_query script) to
 interactively cURL the iTunes API. Its output will be in the correct format.
+You will need [fzf](https://junegunn.github.io/fzf/) as a dependency.
 
 ## Building And Serving
 
