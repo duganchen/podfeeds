@@ -146,7 +146,7 @@ Here is the KDL source code for the layout:
         }
     }
 
-## Appendix: Building Lynx
+## Appendix A: Building Lynx
 
 Lynx needs to be built with --enable-externs, which is needed to enable
 downloading with a download manager.
@@ -164,3 +164,7 @@ you need:
 That puts Lynx in ~/.local/bin. Put the source directory in ~/.local/src so that
 you can "make uninstall" in it. The configuration directory, containing lynx.cfg
 and lynx.lss, are in ~/.local/etc.
+
+## Appendix B: Credits
+
+This project uses [Bamboo CSS](https://rilwis.github.io/bamboo/) as a submodule.
