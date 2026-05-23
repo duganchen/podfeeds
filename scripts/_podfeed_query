@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+if [[ "$PODFEED_JSON" == "" ]]; then
+	echo Please set PODFEED_JSON
+	exit 1
+fi
+
+if [[ ! -f "$PODFEED_JSON" ]]; then
+	echo PODFEED_JSON file not found
+	exit 2
+fi
+
+# See: https://performance-partners.apple.com/search-api
+curl --silent \
+	--get \
+	--data-urlencode "media=podcast" \
+	--data-urlencode "entity=podcast" \
+	--data-urlencode "attribute=titleTerm" \
+	--data-urlencode "term=$1" \
+	https://itunes.apple.com/search >"$PODFEED_JSON"
+
+cat "$PODFEED_JSON" | jq -r '.results[].collectionName'

@@ -38,10 +38,7 @@ That will produce an executable named "podfeeds".
 
 ## Gathering Feed URLs
 
-Gather your podcast feed URLs. One way to find them is to use the "podfeed"
-script I posted here:
-
-[CLI app to get podcast feed URLs](https://www.linuxquestions.org/questions/linuxquestions-org-member-success-stories-23/cli-app-to-get-podcast-feed-urls-4175656322/#post6631493)
+Gather your podcast feed URLs.
 
 Paste them into a file named podcasts.yaml, in the repository directory (same
 directory as the podfeeds executable).
@@ -55,6 +52,9 @@ example:
     # CBC AS It Happens
     - https://www.cbc.ca/podcasting/includes/asithappens.xml
     - https://www.cbc.ca/podcasting/includes/cbcpowerandpolitics.xml
+
+Use the included scripts/podfeed script (and its helper _podfeed_query script) to
+interactively cURL the iTunes API. Its output will be in the correct format.
 
 ## Building And Serving
 

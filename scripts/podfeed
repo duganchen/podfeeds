@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+# Based on this tutorial:
+# https://junegunn.github.io/fzf/tips/ripgrep-integration/
+
+PODFEED_JSON=$(mktemp)
+export PODFEED_JSON
+
+RELOAD='reload:_podfeed_query {q}'
+
+fzf \
+	--disabled \
+	--ansi \
+	--bind "start:$RELOAD" \
+	--bind "change:$RELOAD" \
+	--bind "enter:become:cat $PODFEED_JSON | jq -r '.results[0] | (\"- \" + .feedUrl + \" # \" + .collectionName)'"
+
+rm -rf "$PODFEED_JSON"
