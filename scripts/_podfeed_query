@@ -19,4 +19,4 @@ curl --silent \
 	--data-urlencode "term=$1" \
 	https://itunes.apple.com/search >"$PODFEED_JSON"
 
-cat "$PODFEED_JSON" | jq -r '.results[].collectionName'
+cat "$PODFEED_JSON" | jq -r '.results[].collectionName' | sort | uniq
