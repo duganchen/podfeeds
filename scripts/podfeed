@@ -12,6 +12,7 @@ export PODFEED_JSON
 _podfeed_query "$1" | fzf \
 	--disabled \
 	--ansi \
+	--select-1 \
 	--bind "change:reload:_podfeed_query {q}" \
 	--bind "enter:become:cat $PODFEED_JSON | jq -r '.results[0] | (\"- \" + .feedUrl + \" # \" + .collectionName)'"
 
