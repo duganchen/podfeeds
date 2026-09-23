@@ -195,7 +195,7 @@ func build() error {
 	yaml.Unmarshal(buf, &feeds)
 
 	if err != nil {
-		return err
+		return errors.New("podcasts.yaml not found")
 	}
 
 	subscriptions := make([]Subscription, len(feeds))
@@ -301,6 +301,7 @@ func main() {
 	case "build":
 		err := build()
 		if err != nil {
+			log.Fatal(err)
 			stat, err := os.Stat("_site.tmp")
 			if err != nil && stat.IsDir() {
 				err = os.RemoveAll("_site.tmp")
