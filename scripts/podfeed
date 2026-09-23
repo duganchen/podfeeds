@@ -9,6 +9,10 @@ export PODFEED_JSON
 # I couldn't get the start: binding to work.
 # Fedora 44. FZF 0.70.0.
 
+# This could probably be improved (for the cases where there's a single match for your query)
+# https://github.com/junegunn/fzf/discussions/3803#discussioncomment-9485659
+# That's currently a TODO.
+
 _podfeed_query "$1" | fzf \
 	--disabled \
 	--ansi \
