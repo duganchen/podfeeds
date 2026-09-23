@@ -77,7 +77,7 @@ func help() {
 	fmt.Println("Usage: podfeeds (build|serve)")
 }
 
-func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemplate *template.Template, fp *gofeed.Parser, spinner *Spinner) func() error {
+func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemplate *template.Template, spinner *Spinner) func() error {
 
 	return func() error {
 
@@ -200,8 +200,6 @@ func build() error {
 
 	subscriptions := make([]Subscription, len(feeds))
 
-	fp := gofeed.NewParser()
-
 	podcastTemplate := template.Must(template.ParseFiles("./templates/podcast.html"))
 
 	_, err = os.Stat("_site.tmp")
@@ -215,7 +213,7 @@ func build() error {
 	g := new(errgroup.Group)
 	spinner := NewSpinner()
 	for i, feed := range feeds {
-		g.Go(fetchFeed(feed, subscriptions, i, podcastTemplate, fp, spinner))
+		g.Go(fetchFeed(feed, subscriptions, i, podcastTemplate, spinner))
 	}
 
 	err = g.Wait()
