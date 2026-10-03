@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"encoding/base64"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"log"
@@ -91,7 +91,7 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemp
 			return err
 		}
 
-		renderedPodcastFilename := fmt.Sprintf("%s.html", base64.StdEncoding.EncodeToString(([]byte(feed))))
+		renderedPodcastFilename := fmt.Sprintf("%x.html", sha256.Sum256([]byte(feed)))
 
 		subscriptions[index] = Subscription{parsed.Title, renderedPodcastFilename}
 
