@@ -300,13 +300,16 @@ func main() {
 
 	switch os.Args[1] {
 	case "build":
-		err := build()
-		if err != nil {
-			stat, err2 := os.Stat("_site.tmp")
-			if err2 == nil && stat.IsDir() {
-				err = os.RemoveAll("_site.tmp")
+		buildErr := build()
+		if buildErr != nil {
+			stat, notFound:= os.Stat("_site.tmp")
+			if notFound == nil && stat.IsDir() {
+				cleanupErr := os.RemoveAll("_site.tmp")
+				if cleanupErr != nil {
+					fmt.Println(cleanupErr)
+				}
 			}
-			log.Fatal(err)
+			log.Fatal(buildErr)
 		}
 	case "serve":
 		err := serve()
