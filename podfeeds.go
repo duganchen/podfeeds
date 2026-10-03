@@ -124,7 +124,6 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemp
 
 			// Skipping "Content". In the feed where I saw it, it has the same content as the
 			// description.
-
 			if len(parsedItem.Authors) > 0 {
 				var authorsBuilder strings.Builder
 				for _, author := range parsedItem.Authors {
@@ -193,13 +192,11 @@ func build() error {
 
 	podcastTemplate := template.Must(template.ParseFiles("./templates/podcast.html"))
 
-	_, err = os.Stat("_site.tmp")
-	if err == nil {
+	siteTmpErr := os.Mkdir("_site.tmp", 0755)
+	if siteTmpErr != nil && os.IsExist(err) {
 		fmt.Printf("A build is already in progress")
 		return nil
 	}
-
-	os.Mkdir("_site.tmp", 0755)
 
 	client := &http.Client{
 		Timeout: 15 * time.Second,
