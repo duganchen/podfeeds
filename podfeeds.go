@@ -161,7 +161,10 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemp
 		if err != nil {
 			return err
 		}
-		podcastTemplate.Execute(renderedPodcastFile, podcast)
+		err = podcastTemplate.Execute(renderedPodcastFile, podcast)
+		if err != nil {
+			return err
+		}
 		defer renderedPodcastFile.Close()
 
 		spinner.mutex.Lock()
