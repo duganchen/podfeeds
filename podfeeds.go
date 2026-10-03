@@ -77,29 +77,16 @@ func help() {
 	fmt.Println("Usage: podfeeds (build|serve)")
 }
 
-func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemplate *template.Template, fp *gofeed.Parser, spinner *Spinner) func() error {
+func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
 
 	return func() error {
 
+		fp := gofeed.NewParser()
 		// Setting the user agent does turn out to be necessary sometimes
+		fp.UserAgent = "Mozilla/5.0"
+		fp.Client = client
 
-		req, err := http.NewRequest(http.MethodGet, feed, nil)
-		if err != nil {
-			return err
-		}
-		req.Header.Set("User-Agent", "Mozilla/5.0")
-
-		client := &http.Client{
-			Timeout: 15 * time.Second,
-		}
-
-		resp, err := client.Do(req)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-
-		parsed, err := fp.Parse(resp.Body)
+		parsed, err := fp.ParseURL(feed)
 		if err != nil {
 			return err
 		}
@@ -201,8 +188,6 @@ func build() error {
 
 	subscriptions := make([]Subscription, len(feeds))
 
-	fp := gofeed.NewParser()
-
 	podcastTemplate := template.Must(template.ParseFiles("./templates/podcast.html"))
 
 	_, err = os.Stat("_site.tmp")
@@ -213,10 +198,14 @@ func build() error {
 
 	os.Mkdir("_site.tmp", 0755)
 
+	client := &http.Client{
+		Timeout: 15 * time.Second,
+	}
+
 	g := new(errgroup.Group)
 	spinner := NewSpinner()
 	for i, feed := range feeds {
-		g.Go(fetchFeed(feed, subscriptions, i, podcastTemplate, fp, spinner))
+		g.Go(fetchFeed(feed, subscriptions, i, podcastTemplate, client, spinner))
 	}
 
 	err = g.Wait()
@@ -302,7 +291,7 @@ func main() {
 	case "build":
 		buildErr := build()
 		if buildErr != nil {
-			stat, notFound:= os.Stat("_site.tmp")
+			stat, notFound := os.Stat("_site.tmp")
 			if notFound == nil && stat.IsDir() {
 				cleanupErr := os.RemoveAll("_site.tmp")
 				if cleanupErr != nil {
