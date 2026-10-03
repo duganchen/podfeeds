@@ -190,10 +190,13 @@ func build() error {
 	feeds := make([]string, 0)
 
 	buf, err := os.ReadFile("./podcasts.yaml")
-	yaml.Unmarshal(buf, &feeds)
-
 	if err != nil {
-		return errors.New("podcasts.yaml not found")
+		return err
+	}
+
+	err = yaml.Unmarshal(buf, &feeds)
+	if err != nil {
+		return err
 	}
 
 	subscriptions := make([]Subscription, len(feeds))
