@@ -44,7 +44,6 @@ iTunes API. Its output will be in the correct format. You will need [fzf](https:
 press ENTER when the correct feed comes up. Or "podfeed" followed by part of the name of the podcast you want.
 
 Paste them into a file named podcasts.yaml, in the repository directory (same directory as the podfeeds executable).
-
 Separate each line with a hyphen and a space, and use # for comments. For example:
 
     - https://www.cbc.ca/podcasting/includes/wr.xml # CBC World Report
