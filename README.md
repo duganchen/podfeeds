@@ -50,8 +50,8 @@ Separate each line with a hyphen and a space, and use # for comments. For exampl
     - https://www.cbc.ca/podcasting/includes/cbcpowerandpolitics.xml
 
 Use the included scripts/podfeed script (and its helper \_podfeed_query script) to interactively cURL the iTunes API.
-Its output will be in the correct format. You will need [fzf](https://junegunn.github.io/fzf/) as a dependency. Put both
-in your PATH.
+Its output will be in the correct format. You will need [fzf](https://junegunn.github.io/fzf/),
+[jq](https://jqlang.org/) and curl in your PATH.
 
 ## Building And Serving
 
