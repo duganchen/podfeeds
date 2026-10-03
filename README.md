@@ -38,6 +38,11 @@ That will produce an executable named "podfeeds".
 
 Gather your podcast feed URLs.
 
+To do so, use the included scripts/podfeed script (and its helper \_podfeed_query script) to interactively curl the
+iTunes API. Its output will be in the correct format. You will need [fzf](https://junegunn.github.io/fzf/),
+[jq](https://jqlang.org/) and curl, as well as both scripts, in your PATH. Just fire up "podfeed", start typing, and
+press ENTER when the correct feed comes up. Or "podfeed" followed by part of the name of the podcast you want.
+
 Paste them into a file named podcasts.yaml, in the repository directory (same directory as the podfeeds executable).
 
 Separate each line with a hyphen and a space, and use # for comments. For example:
@@ -48,10 +53,6 @@ Separate each line with a hyphen and a space, and use # for comments. For exampl
     # CBC AS It Happens
     - https://www.cbc.ca/podcasting/includes/asithappens.xml
     - https://www.cbc.ca/podcasting/includes/cbcpowerandpolitics.xml
-
-Use the included scripts/podfeed script (and its helper \_podfeed_query script) to interactively curl the iTunes API.
-Its output will be in the correct format. You will need [fzf](https://junegunn.github.io/fzf/),
-[jq](https://jqlang.org/) and curl in your PATH.
 
 ## Building And Serving
 
