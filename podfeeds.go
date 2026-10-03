@@ -203,6 +203,7 @@ func build() error {
 	}
 
 	g := new(errgroup.Group)
+	g.SetLimit(20)
 	spinner := NewSpinner()
 	for i, feed := range feeds {
 		g.Go(fetchFeed(feed, subscriptions, i, podcastTemplate, client, spinner))
