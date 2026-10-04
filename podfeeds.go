@@ -104,16 +104,23 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 			return err
 		}
 
-		fmt.Println(resp.StatusCode)
+		if resp.StatusCode == http.StatusNotModified {
+			return nil
+		}
 
 		// And save the caching headers from the response
 		headers := make([]Header, 0)
-		for _, headerName := range []string{"Etag", "Last-Modified", "Cache-Control", "Expires", "Content-Location", "Date", "Vary"} {
-			respHeader := resp.Header.Get(headerName)
-			if respHeader != "" {
-				headers = append(headers, Header{Name: headerName, Value: respHeader})
-			}
+
+		etag := resp.Header.Get("Etag")
+		if etag != "" {
+			headers = append(headers, Header{Name: "If-None-Match", Value: etag})
 		}
+
+		lastModified := resp.Header.Get("Last-Modified")
+		if lastModified != "" {
+			headers = append(headers, Header{Name: "If-Modified-Since", Value: lastModified})
+		}
+
 		cachedHeaders[feed] = headers
 
 		defer resp.Body.Close()
