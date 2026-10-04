@@ -94,11 +94,18 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 		}
 		req.Header.Set("User-Agent", "Mozilla/5.0")
 
+		// Add the caching headers from the last build to the request
+		for _, savedHeader := range cachedHeaders[feed] {
+			req.Header.Set(savedHeader.Name, savedHeader.Value)
+
+		}
+
 		resp, err := client.Do(req)
 		if err != nil {
 			return err
 		}
 
+		// And save the caching headers from the response
 		headers := make([]Header, 0)
 		for _, headerName := range []string{"Etag", "Last-Modified", "Cache-Control", "Expires", "Content-Location", "Date", "Vary"} {
 			respHeader := resp.Header.Get(headerName)
@@ -232,6 +239,10 @@ func build() error {
 	spinner := NewSpinner()
 
 	headers := make(map[string][]Header)
+	cacheBytes, err := os.ReadFile("cache.json")
+	if err == nil {
+		json.Unmarshal(cacheBytes, &headers)
+	}
 
 	for i, feed := range feeds {
 		g.Go(fetchFeed(feed, subscriptions, i, headers, podcastTemplate, client, spinner))
