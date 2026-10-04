@@ -18,3 +18,4 @@ podcasts.yaml
 podfeeds
 _site/*.html
 _site.tmp
+cache.json

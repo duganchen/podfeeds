@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"crypto/sha256"
+	// It is my misfortune to start this right before json v2 is becoming available
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -57,6 +59,11 @@ type Podcast struct {
 	ToC []ToCEntry
 }
 
+type Header struct {
+	Name  string
+	Value string
+}
+
 // No I am not going to use a library for this
 type Spinner struct {
 	index  int
@@ -65,7 +72,7 @@ type Spinner struct {
 	mutex  sync.Mutex
 }
 
-// I admit that this is from AI
+// I admit that the spinner frames are from AI
 func NewSpinner() *Spinner {
 	// AI also suggested this. Which, being UTF-8, is a bit more complicated to implement.
 	// "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
@@ -77,7 +84,7 @@ func help() {
 	fmt.Println("Usage: podfeeds (build|serve)")
 }
 
-func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
+func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeaders map[string][]Header, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
 
 	return func() error {
 
@@ -91,6 +98,16 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemp
 		if err != nil {
 			return err
 		}
+
+		headers := make([]Header, 0)
+		for _, headerName := range []string{"Etag", "Last-Modified", "Cache-Control", "Expires", "Content-Location", "Date", "Vary"} {
+			respHeader := resp.Header.Get(headerName)
+			if respHeader != "" {
+				headers = append(headers, Header{Name: headerName, Value: respHeader})
+			}
+		}
+		cachedHeaders[feed] = headers
+
 		defer resp.Body.Close()
 
 		fp := gofeed.NewParser()
@@ -213,8 +230,11 @@ func build() error {
 	g := new(errgroup.Group)
 	g.SetLimit(20)
 	spinner := NewSpinner()
+
+	headers := make(map[string][]Header)
+
 	for i, feed := range feeds {
-		g.Go(fetchFeed(feed, subscriptions, i, podcastTemplate, client, spinner))
+		g.Go(fetchFeed(feed, subscriptions, i, headers, podcastTemplate, client, spinner))
 	}
 
 	err = g.Wait()
@@ -222,7 +242,17 @@ func build() error {
 		return err
 	}
 
-	// Clear the spinner. Thank you, AI.
+	jsonData, err := json.MarshalIndent(headers, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile("./cache.json", jsonData, 0644)
+	if err != nil {
+		return err
+	}
+
+	// This was to erase the spinner, right?
 	fmt.Print("\r                 \r")
 
 	htmls, _ := filepath.Glob("_site/*.html")
