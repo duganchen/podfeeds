@@ -104,6 +104,8 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 			return err
 		}
 
+		fmt.Println(resp.StatusCode)
+
 		// And save the caching headers from the response
 		headers := make([]Header, 0)
 		for _, headerName := range []string{"Etag", "Last-Modified", "Cache-Control", "Expires", "Content-Location", "Date", "Vary"} {
