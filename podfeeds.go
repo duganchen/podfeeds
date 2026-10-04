@@ -59,11 +59,6 @@ type Podcast struct {
 	TOC []TOCEntry
 }
 
-type Header struct {
-	Name  string
-	Value string
-}
-
 // No I am not going to use a library for this
 type Spinner struct {
 	index  int
@@ -83,7 +78,7 @@ func help() {
 	fmt.Println("Usage: podfeeds (build|serve)")
 }
 
-func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeaders map[string][]Header, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
+func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeaders map[string]map[string]string, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
 
 	return func() error {
 
@@ -94,8 +89,8 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 		req.Header.Set("User-Agent", "Mozilla/5.0")
 
 		// Add the caching headers from the last build to the request
-		for _, savedHeader := range cachedHeaders[feed] {
-			req.Header.Set(savedHeader.Name, savedHeader.Value)
+		for fieldName, fieldValue := range cachedHeaders[feed] {
+			req.Header.Set(fieldName, fieldValue)
 
 		}
 
@@ -109,19 +104,19 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 		}
 
 		// And save the caching headers from the response
-		headers := make([]Header, 0)
+		newHeaders := make(map[string]string)
 
 		etag := resp.Header.Get("Etag")
 		if etag != "" {
-			headers = append(headers, Header{Name: "If-None-Match", Value: etag})
+			newHeaders["If-None-Match"] = etag
 		}
 
 		lastModified := resp.Header.Get("Last-Modified")
 		if lastModified != "" {
-			headers = append(headers, Header{Name: "If-Modified-Since", Value: lastModified})
+			newHeaders["If-Modified-Since"] = lastModified
 		}
 
-		cachedHeaders[feed] = headers
+		cachedHeaders[feed] = newHeaders
 
 		defer resp.Body.Close()
 
@@ -246,7 +241,7 @@ func build() error {
 	g.SetLimit(20)
 	spinner := NewSpinner()
 
-	headers := make(map[string][]Header)
+	headers := make(map[string]map[string]string)
 	cacheBytes, err := os.ReadFile("cache.json")
 	if err == nil {
 		json.Unmarshal(cacheBytes, &headers)
