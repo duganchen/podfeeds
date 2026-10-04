@@ -72,7 +72,6 @@ type Spinner struct {
 	mutex  sync.Mutex
 }
 
-// I admit that the spinner frames are from AI
 func NewSpinner() *Spinner {
 	// AI also suggested this. Which, being UTF-8, is a bit more complicated to implement.
 	// "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
@@ -140,18 +139,18 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 
 			item.GUID = parsedItem.GUID
 
-			podcast.TOC = append(podcast.TOC, TOCEntry{item.GUID, item.Title})
+			podcast.TOC = append(podcast.TOC, TOCEntry{GUID: item.GUID, Title: item.Title})
 
 			for _, enclosure := range parsedItem.Enclosures {
-				item.Enclosures = append(item.Enclosures, Enclosure{enclosure.URL, enclosure.Type})
+				item.Enclosures = append(item.Enclosures, Enclosure{URL: enclosure.URL, Type: enclosure.Type})
 			}
 
 			if parsedItem.UpdatedParsed != nil {
-				item.Metadata = append(item.Metadata, Metadata{"Updated", parsedItem.UpdatedParsed.Format(time.RFC822)})
+				item.Metadata = append(item.Metadata, Metadata{Key: "Updated", Value: parsedItem.UpdatedParsed.Format(time.RFC822)})
 			}
 
 			if parsedItem.PublishedParsed != nil {
-				item.Metadata = append(item.Metadata, Metadata{"Published", parsedItem.PublishedParsed.Format(time.RFC822)})
+				item.Metadata = append(item.Metadata, Metadata{Key: "Published", Value: parsedItem.PublishedParsed.Format(time.RFC822)})
 			}
 
 			// Skipping "Content". In the feed where I saw it, it has the same content as the
@@ -177,7 +176,7 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 
 					authorsBuilder.WriteString(" ")
 				}
-				item.Metadata = append(item.Metadata, Metadata{"Authors", authorsBuilder.String()})
+				item.Metadata = append(item.Metadata, Metadata{Key: "Authors", Value: authorsBuilder.String()})
 			}
 
 			podcast.Items = append(podcast.Items, item)
