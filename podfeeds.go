@@ -261,7 +261,7 @@ func build() error {
 		return err
 	}
 
-	err = os.WriteFile("./cache.json", jsonData, 0644)
+	err = os.WriteFile("cache.json", jsonData, 0644)
 	if err != nil {
 		return err
 	}
