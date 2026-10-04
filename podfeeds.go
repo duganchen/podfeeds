@@ -81,12 +81,20 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, podcastTemp
 
 	return func() error {
 
-		fp := gofeed.NewParser()
-		// Setting the user agent does turn out to be necessary sometimes
-		fp.UserAgent = "Mozilla/5.0"
-		fp.Client = client
+		req, err := http.NewRequest(http.MethodGet, feed, nil)
+		if err != nil {
+			return err
+		}
+		req.Header.Set("User-Agent", "Mozilla/5.0")
 
-		parsed, err := fp.ParseURL(feed)
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		fp := gofeed.NewParser()
+		parsed, err := fp.Parse(resp.Body)
 		if err != nil {
 			return err
 		}
