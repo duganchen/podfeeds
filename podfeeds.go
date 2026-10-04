@@ -95,6 +95,7 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 		}
 
 		resp, err := client.Do(req)
+
 		if err != nil {
 			return err
 		}
@@ -118,13 +119,12 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 
 		cachedHeaders[feed] = newHeaders
 
-		defer resp.Body.Close()
-
 		fp := gofeed.NewParser()
 		parsed, err := fp.Parse(resp.Body)
 		if err != nil {
 			return err
 		}
+		defer resp.Body.Close()
 
 		renderedPodcastFilename := fmt.Sprintf("%x.html", sha256.Sum256([]byte(feed)))
 
