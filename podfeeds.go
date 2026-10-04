@@ -24,7 +24,7 @@ import (
 
 type Subscription struct {
 	Title string
-	Url   string
+	URL   string
 }
 
 type Metadata struct {
@@ -45,7 +45,7 @@ type Item struct {
 	GUID        string
 }
 
-type ToCEntry struct {
+type TOCEntry struct {
 	GUID  string
 	Title string
 }
@@ -56,7 +56,7 @@ type Podcast struct {
 	Language    string
 	Items       []Item
 	// We don't care about FeedLink. It's a link to the XML file.
-	ToC []ToCEntry
+	TOC []TOCEntry
 }
 
 type Header struct {
@@ -140,7 +140,7 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 
 			item.GUID = parsedItem.GUID
 
-			podcast.ToC = append(podcast.ToC, ToCEntry{item.GUID, item.Title})
+			podcast.TOC = append(podcast.TOC, TOCEntry{item.GUID, item.Title})
 
 			for _, enclosure := range parsedItem.Enclosures {
 				item.Enclosures = append(item.Enclosures, Enclosure{enclosure.URL, enclosure.Type})
@@ -183,8 +183,8 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 			podcast.Items = append(podcast.Items, item)
 		}
 
-		if len(podcast.ToC) == 1 {
-			podcast.ToC = nil
+		if len(podcast.TOC) == 1 {
+			podcast.TOC = nil
 		}
 
 		renderedPodcastFilePath := fmt.Sprintf("_site.tmp/%s", renderedPodcastFilename)
