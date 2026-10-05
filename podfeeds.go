@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"maps"
 	"net"
 	"net/http"
 	"os"
@@ -71,10 +70,11 @@ type Spinner struct {
 	mutex  sync.Mutex
 }
 
-// Works well for json, which I'm still using
+// Works well for json, which works well for the static site generator design
 type FeedInfo struct {
 	Subscription Subscription
-	Headers      map[string]string
+	ETag string
+	LastModified string
 	HTML         string // Full HTML page. gzipped and base64 encoded
 }
 
@@ -123,25 +123,13 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 			return nil
 		}
 
-		// And save the caching headers from the response
-		newHeaders := make(map[string]string)
-
-		etag := resp.Header.Get("Etag")
-		if etag != "" {
-			newHeaders["If-None-Match"] = etag
-		}
-
-		lastModified := resp.Header.Get("Last-Modified")
-		if lastModified != "" {
-			newHeaders["If-Modified-Since"] = lastModified
-		}
-
 		if cache[feed] == nil {
 			cache[feed] = &FeedInfo{}
 		}
-		cache[feed].Headers = make(map[string]string)
 
-		maps.Copy(cache[feed].Headers, newHeaders)
+		cache[feed].ETag = resp.Header.Get("Etag")
+		cache[feed].LastModified = resp.Header.Get("Last-Modified")
+
 
 		fp := gofeed.NewParser()
 		parsed, err := fp.Parse(resp.Body)
@@ -168,10 +156,6 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 
 			podcast.TOC = append(podcast.TOC, TOCEntry{GUID: item.GUID, Title: item.Title})
 
-			for _, enclosure := range parsedItem.Enclosures {
-				item.Enclosures = append(item.Enclosures, Enclosure{URL: enclosure.URL, Type: enclosure.Type})
-			}
-
 			if parsedItem.UpdatedParsed != nil {
 				item.Metadata = append(item.Metadata, Metadata{Key: "Updated", Value: parsedItem.UpdatedParsed.Format(time.RFC822)})
 			}
@@ -196,7 +180,6 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 					if author.Email != "" {
 						authorsBuilder.WriteString(author.Email)
 					}
-
 					if author.Name != "" && author.Email != "" {
 						authorsBuilder.WriteString(")")
 					}
@@ -394,6 +377,11 @@ func serve() error {
 func main() {
 
 	if len(os.Args) != 2 && len(os.Args) != 3 {
+		help()
+		return
+	}
+
+	if len(os.Args) == 3 && os.Args[2] != "clean" {
 		help()
 		return
 	}
