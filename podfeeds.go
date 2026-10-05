@@ -25,6 +25,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Some redundancy with Page (with )
 type Subscription struct {
 	Title string
 	URL   string
@@ -89,7 +90,11 @@ func help() {
 	fmt.Fprintln(os.Stderr, "Usage: podfeeds (build [clean]|serve)")
 }
 
-func fetchFeed(feed string, subscriptions []Subscription, index int, urlToPage map[string]*Page, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
+func savedFeedFilename(feed string) string {
+	return fmt.Sprintf("%x.html", sha256.Sum256([]byte(feed)))
+}
+
+func fetchFeed(feed string, urlToPage map[string]*Page, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
 
 	return func() error {
 
@@ -113,7 +118,7 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, urlToPage m
 			return err
 		}
 
-		renderedPodcastFilename := fmt.Sprintf("%x.html", sha256.Sum256([]byte(feed)))
+		renderedPodcastFilename := savedFeedFilename(feed)
 
 		// This is currently unreachable now that the code to add the cache headers to the request is commented out
 		if resp.StatusCode == http.StatusNotModified {
@@ -136,8 +141,6 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, urlToPage m
 			return err
 		}
 		defer resp.Body.Close()
-
-		subscriptions[index] = Subscription{parsed.Title, renderedPodcastFilename}
 
 		urlToPage[feed].Title = parsed.Title
 
@@ -258,8 +261,6 @@ func build(clean bool) error {
 		return errors.New("Duplicate feed")
 	}
 
-	subscriptions := make([]Subscription, len(feeds))
-
 	podcastTemplate := template.Must(template.ParseFiles("./templates/podcast.html"))
 
 	siteTmpErr := os.Mkdir("_site.tmp", 0755)
@@ -288,8 +289,8 @@ func build(clean bool) error {
 		json.Unmarshal(cacheBytes, &urlToPage)
 	}
 
-	for i, feed := range feeds {
-		g.Go(fetchFeed(feed, subscriptions, i, urlToPage, podcastTemplate, client, spinner))
+	for _, feed := range feeds {
+		g.Go(fetchFeed(feed, urlToPage, podcastTemplate, client, spinner))
 	}
 
 	err = g.Wait()
@@ -327,6 +328,12 @@ func build(clean bool) error {
 	}
 
 	os.RemoveAll("_site.tmp")
+
+	subscriptions := make([]Subscription, len(feeds))
+	for _, feed := range feeds {
+		subscriptions = append(subscriptions, Subscription{Title: urlToPage[feed].Title, URL: savedFeedFilename(feed)})
+
+	}
 
 	indexTemplate := template.Must(template.ParseFiles("templates/index.html"))
 	buff := new(bytes.Buffer)
