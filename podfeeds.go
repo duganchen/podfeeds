@@ -89,6 +89,8 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 		req.Header.Set("User-Agent", "Mozilla/5.0")
 
 		// Add the caching headers from the last build to the request
+
+		// Commenting this out while I fix cache hits
 		// for fieldName, fieldValue := range cachedHeaders[feed] {
 		// 	req.Header.Set(fieldName, fieldValue)
 		//
@@ -100,9 +102,12 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 			return err
 		}
 
+		renderedPodcastFilename := fmt.Sprintf("%x.html", sha256.Sum256([]byte(feed)))
+
 		if resp.StatusCode == http.StatusNotModified {
 			return nil
 		}
+
 
 		// And save the caching headers from the response
 		newHeaders := make(map[string]string)
@@ -126,7 +131,6 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 		}
 		defer resp.Body.Close()
 
-		renderedPodcastFilename := fmt.Sprintf("%x.html", sha256.Sum256([]byte(feed)))
 
 		subscriptions[index] = Subscription{parsed.Title, renderedPodcastFilename}
 
@@ -223,7 +227,17 @@ func build() error {
 		return err
 	}
 
+	feedMap := make(map[string]struct{})
+	for _, feed := range feeds {
+		feedMap[feed] = struct{}{}
+	}
+
+	if len(feedMap) < len(feeds) {
+		return errors.New("Duplicate feed")
+	}
+
 	subscriptions := make([]Subscription, len(feeds))
+
 
 	podcastTemplate := template.Must(template.ParseFiles("./templates/podcast.html"))
 
