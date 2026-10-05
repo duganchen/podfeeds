@@ -8,9 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"maps"
 	"net"
 	"net/http"
-	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -70,10 +70,9 @@ type Spinner struct {
 
 type FeedInfo struct {
 	Subscription Subscription
-	Headers map[string]string
-	HTML []byte
+	Headers      map[string]string
+	HTML         []byte
 }
-
 
 func NewSpinner() *Spinner {
 	// AI also suggested this. Which, being UTF-8, is a bit more complicated to implement.
@@ -120,7 +119,6 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 			return nil
 		}
 
-
 		// And save the caching headers from the response
 		newHeaders := make(map[string]string)
 
@@ -134,7 +132,9 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 			newHeaders["If-Modified-Since"] = lastModified
 		}
 
-		cache[feed] = &FeedInfo{}
+		if cache[feed] == nil {
+			cache[feed] = &FeedInfo{}
+		}
 		cache[feed].Headers = make(map[string]string)
 
 		maps.Copy(cache[feed].Headers, newHeaders)
@@ -145,7 +145,6 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 			return err
 		}
 		defer resp.Body.Close()
-
 
 		subscriptions[index] = Subscription{parsed.Title, renderedPodcastFilename}
 
@@ -252,7 +251,6 @@ func build() error {
 	}
 
 	subscriptions := make([]Subscription, len(feeds))
-
 
 	podcastTemplate := template.Must(template.ParseFiles("./templates/podcast.html"))
 
