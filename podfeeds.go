@@ -78,10 +78,6 @@ type Page struct {
 	Title        string
 }
 
-type PageCache struct {
-	Pages []Page
-}
-
 func NewSpinner() *Spinner {
 	// AI also suggested this. Which, being UTF-8, is a bit more complicated to implement.
 	// "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
@@ -97,7 +93,7 @@ func savedFeedFilename(feed string) string {
 	return fmt.Sprintf("%x.html", sha256.Sum256([]byte(feed)))
 }
 
-func fetchFeed(feed string, i int, urlToPage map[string]*Page, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
+func fetchFeed(feed string, i int, pages []Page, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
 
 	return func() error {
 
@@ -135,12 +131,8 @@ func fetchFeed(feed string, i int, urlToPage map[string]*Page, podcastTemplate *
 			return nil
 		}
 
-		if urlToPage[feed] == nil {
-			urlToPage[feed] = &Page{}
-		}
-
-		urlToPage[feed].ETag = resp.Header.Get("Etag")
-		urlToPage[feed].LastModified = resp.Header.Get("Last-Modified")
+		pages[i].ETag = resp.Header.Get("Etag")
+		pages[i].LastModified = resp.Header.Get("Last-Modified")
 
 		fp := gofeed.NewParser()
 		parsed, err := fp.Parse(resp.Body)
@@ -149,7 +141,7 @@ func fetchFeed(feed string, i int, urlToPage map[string]*Page, podcastTemplate *
 		}
 		defer resp.Body.Close()
 
-		urlToPage[feed].Title = parsed.Title
+		pages[i].Title = parsed.Title
 
 		var podcast Podcast
 		podcast.Language = parsed.Language
@@ -235,7 +227,7 @@ func fetchFeed(feed string, i int, urlToPage map[string]*Page, podcastTemplate *
 		if err != nil {
 			return err
 		}
-		urlToPage[feed].HTML = base64.StdEncoding.EncodeToString(cachedHTMLBuffer.Bytes())
+		pages[i].HTML = base64.StdEncoding.EncodeToString(cachedHTMLBuffer.Bytes())
 
 		spinner.mutex.Lock()
 		fmt.Printf("\r	%c", spinner.frames[spinner.index])
@@ -284,20 +276,24 @@ func build(clean bool) error {
 	g.SetLimit(20)
 	spinner := NewSpinner()
 
-	urlToPage := make(map[string]*Page)
-
 	if clean {
 		// Ignoring the error here is deliberate
 		os.Remove("cache.json")
 	}
 
+	pages := make([]Page, len(feeds))
+
 	cacheBytes, err := os.ReadFile("cache.json")
 	if err == nil {
-		json.Unmarshal(cacheBytes, &urlToPage)
+		json.Unmarshal(cacheBytes, &pages)
+	}
+
+	if len(pages) != len(feeds) {
+		return errors.New("Stale cache. Please use podfeeds clean build")
 	}
 
 	for i, feed := range feeds {
-		g.Go(fetchFeed(feed, i, urlToPage, podcastTemplate, client, spinner))
+		g.Go(fetchFeed(feed, i, pages, podcastTemplate, client, spinner))
 	}
 
 	err = g.Wait()
@@ -305,7 +301,7 @@ func build(clean bool) error {
 		return err
 	}
 
-	jsonData, err := json.MarshalIndent(urlToPage, "", "  ")
+	jsonData, err := json.MarshalIndent(pages, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -338,7 +334,7 @@ func build(clean bool) error {
 
 	subscriptions := make([]Subscription, len(feeds))
 	for i, feed := range feeds {
-		subscriptions[i].Title = urlToPage[feed].Title
+		subscriptions[i].Title = pages[i].Title
 		subscriptions[i].URL = savedFeedFilename(feed)
 	}
 
