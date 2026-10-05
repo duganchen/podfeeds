@@ -71,7 +71,7 @@ type Spinner struct {
 }
 
 // Works well for json, which works well for the static site generator design
-type FeedInfo struct {
+type Page struct {
 	Subscription Subscription
 	ETag string
 	LastModified string
@@ -89,7 +89,7 @@ func help() {
 	fmt.Fprintln(os.Stderr, "Usage: podfeeds (build [clean]|serve)")
 }
 
-func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[string]*FeedInfo, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
+func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[string]*Page, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
 
 	return func() error {
 
@@ -124,7 +124,7 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 		}
 
 		if cache[feed] == nil {
-			cache[feed] = &FeedInfo{}
+			cache[feed] = &Page{}
 		}
 
 		cache[feed].ETag = resp.Header.Get("Etag")
@@ -276,7 +276,7 @@ func build(clean bool) error {
 	g.SetLimit(20)
 	spinner := NewSpinner()
 
-	cache := make(map[string]*FeedInfo)
+	cache := make(map[string]*Page)
 
 	if clean {
 		// Ignoring the error here is deliberate
