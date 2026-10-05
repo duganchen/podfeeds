@@ -89,7 +89,7 @@ func help() {
 	fmt.Fprintln(os.Stderr, "Usage: podfeeds (build [clean]|serve)")
 }
 
-func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[string]*Page, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
+func fetchFeed(feed string, subscriptions []Subscription, index int, urlToPage map[string]*Page, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
 
 	return func() error {
 
@@ -123,12 +123,12 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 			return nil
 		}
 
-		if cache[feed] == nil {
-			cache[feed] = &Page{}
+		if urlToPage[feed] == nil {
+			urlToPage[feed] = &Page{}
 		}
 
-		cache[feed].ETag = resp.Header.Get("Etag")
-		cache[feed].LastModified = resp.Header.Get("Last-Modified")
+		urlToPage[feed].ETag = resp.Header.Get("Etag")
+		urlToPage[feed].LastModified = resp.Header.Get("Last-Modified")
 
 		fp := gofeed.NewParser()
 		parsed, err := fp.Parse(resp.Body)
@@ -139,7 +139,7 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 
 		subscriptions[index] = Subscription{parsed.Title, renderedPodcastFilename}
 
-		cache[feed].Title = parsed.Title
+		urlToPage[feed].Title = parsed.Title
 
 		var podcast Podcast
 		podcast.Language = parsed.Language
@@ -225,7 +225,7 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 		if err != nil {
 			return err
 		}
-		cache[feed].HTML = base64.StdEncoding.EncodeToString(cachedHTMLBuffer.Bytes())
+		urlToPage[feed].HTML = base64.StdEncoding.EncodeToString(cachedHTMLBuffer.Bytes())
 
 		spinner.mutex.Lock()
 		fmt.Printf("\r	%c", spinner.frames[spinner.index])
@@ -276,7 +276,7 @@ func build(clean bool) error {
 	g.SetLimit(20)
 	spinner := NewSpinner()
 
-	cache := make(map[string]*Page)
+	urlToPage := make(map[string]*Page)
 
 	if clean {
 		// Ignoring the error here is deliberate
@@ -285,11 +285,11 @@ func build(clean bool) error {
 
 	cacheBytes, err := os.ReadFile("cache.json")
 	if err == nil {
-		json.Unmarshal(cacheBytes, &cache)
+		json.Unmarshal(cacheBytes, &urlToPage)
 	}
 
 	for i, feed := range feeds {
-		g.Go(fetchFeed(feed, subscriptions, i, cache, podcastTemplate, client, spinner))
+		g.Go(fetchFeed(feed, subscriptions, i, urlToPage, podcastTemplate, client, spinner))
 	}
 
 	err = g.Wait()
@@ -297,7 +297,7 @@ func build(clean bool) error {
 		return err
 	}
 
-	jsonData, err := json.MarshalIndent(cache, "", "  ")
+	jsonData, err := json.MarshalIndent(urlToPage, "", "  ")
 	if err != nil {
 		return err
 	}
