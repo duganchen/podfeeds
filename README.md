@@ -57,10 +57,12 @@ Separate each line with a hyphen and a space, and use # for comments. For exampl
 
 Podfeeds is functionally a static site generator. Do the following with the repository as the current directory:
 
-    ./podfeeds build
+    ./podfeeds build clean
 
-That builds the site to \_site. Subsequent builds will avoid fetching, parsing and rendering feeds that haven't changed.
-You can override that to do a clean build:
+That builds the site to \_site.
+
+When rebuilding (especially if you haven't changed podcasts.yaml), you can use the cached data (stored in cache.json)
+for a speed-up:
 
     ./podfeeds build
 

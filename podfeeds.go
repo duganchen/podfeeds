@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -105,15 +106,13 @@ func fetchFeed(feed string, i int, pages []Page, podcastTemplate *template.Templ
 
 		// Add the caching headers from the last build to the request
 
-		// Commenting this out while I fix cache hits
+		if pages[i].LastModified != "" {
+			req.Header.Set("If-Modified-Since", pages[i].LastModified)
+		}
 
-		// if urlToPage[feed].LastModified != "" {
-		// 	req.Header.Set("If-Modified-Since", urlToPage[feed].LastModified)
-		// }
-		//
-		// if urlToPage[feed].ETag != "" {
-		// 	req.Header.Set("If-None-Match", urlToPage[feed].ETag)
-		// }
+		if pages[i].ETag != "" {
+			req.Header.Set("If-None-Match", pages[i].ETag)
+		}
 
 		resp, err := client.Do(req)
 
@@ -123,11 +122,31 @@ func fetchFeed(feed string, i int, pages []Page, podcastTemplate *template.Templ
 
 		renderedPodcastFilename := savedFeedFilename(feed)
 
-		// This is currently unreachable now that the code to add the cache headers to the request is commented out
 		if resp.StatusCode == http.StatusNotModified {
-			// TODO
-			// In the case of a cache hit, we still need to have a rendered html file, and also a populated
-			// Subscription for the index page.
+			// Got it. In the case of a cache hit, we just write out the HTML page that we saved from the last build
+			// (which is stored gzipped and base64-encoded)
+			// The rest of what we need has already been loaded from the cache.
+
+			rawReader := strings.NewReader(pages[i].HTML)
+			b64Reader := base64.NewDecoder(base64.StdEncoding, rawReader)
+			gzipReader, err := gzip.NewReader(b64Reader)
+			if err != nil {
+				return err
+			}
+			defer gzipReader.Close()
+			htmlBytes, err := io.ReadAll(gzipReader)
+
+			renderedPodcastFilePath := fmt.Sprintf("_site.tmp/%s", renderedPodcastFilename)
+			renderedPodcastFile, err := os.Create(renderedPodcastFilePath)
+			if err != nil {
+				return err
+			}
+			defer renderedPodcastFile.Close()
+			_, err = renderedPodcastFile.Write(htmlBytes)
+			if err != nil {
+				return err
+			}
+
 			return nil
 		}
 
