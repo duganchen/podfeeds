@@ -89,10 +89,10 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 		req.Header.Set("User-Agent", "Mozilla/5.0")
 
 		// Add the caching headers from the last build to the request
-		for fieldName, fieldValue := range cachedHeaders[feed] {
-			req.Header.Set(fieldName, fieldValue)
-
-		}
+		// for fieldName, fieldValue := range cachedHeaders[feed] {
+		// 	req.Header.Set(fieldName, fieldValue)
+		//
+		// }
 
 		resp, err := client.Do(req)
 
