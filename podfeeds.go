@@ -71,10 +71,11 @@ type Spinner struct {
 	mutex  sync.Mutex
 }
 
+// Works well for json, which I'm still using
 type FeedInfo struct {
 	Subscription Subscription
 	Headers      map[string]string
-	HTML         string // gzipped and base64 encoded
+	HTML         string // Full HTML page. gzipped and base64 encoded
 }
 
 func NewSpinner() *Spinner {
