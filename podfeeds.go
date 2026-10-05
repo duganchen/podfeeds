@@ -147,6 +147,7 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 		defer resp.Body.Close()
 
 		subscriptions[index] = Subscription{parsed.Title, renderedPodcastFilename}
+		cache[feed].Subscription = subscriptions[index]
 
 		var podcast Podcast
 		podcast.Language = parsed.Language
