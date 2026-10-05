@@ -104,7 +104,11 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 
 		renderedPodcastFilename := fmt.Sprintf("%x.html", sha256.Sum256([]byte(feed)))
 
+		// This is currently unreachable now that the code to add the cache headers to the request is commented out
 		if resp.StatusCode == http.StatusNotModified {
+			// TODO
+			// In the case of a cache hit, we still need to have a rendered html file, and also a populated
+			// Subscription for the index page.
 			return nil
 		}
 
