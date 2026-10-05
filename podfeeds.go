@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
+	"compress/gzip"
 	"crypto/sha256"
+	"encoding/base64"
 	// It is my misfortune to start this right before json v2 is becoming available
 	"encoding/json"
 	"errors"
@@ -71,7 +74,7 @@ type Spinner struct {
 type FeedInfo struct {
 	Subscription Subscription
 	Headers      map[string]string
-	HTML         []byte
+	HTML         string // gzipped and base64 encoded
 }
 
 func NewSpinner() *Spinner {
@@ -214,11 +217,23 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 		if err != nil {
 			return err
 		}
-		err = podcastTemplate.Execute(renderedPodcastFile, podcast)
+
+		var podcastBuffer bytes.Buffer
+		// err = podcastTemplate.Execute(renderedPodcastFile, podcast)
+		err = podcastTemplate.Execute(&podcastBuffer, podcast)
 		if err != nil {
 			return err
 		}
+
+		w := bufio.NewWriter(renderedPodcastFile)
+		w.Write(podcastBuffer.Bytes())
 		defer renderedPodcastFile.Close()
+
+		var cachedHTMLBuffer bytes.Buffer
+		zw := gzip.NewWriter(&cachedHTMLBuffer)
+		zw.Write(podcastBuffer.Bytes())
+		zw.Close()
+		cache[feed].HTML = base64.StdEncoding.EncodeToString(cachedHTMLBuffer.Bytes())
 
 		spinner.mutex.Lock()
 		fmt.Printf("\r	%c", spinner.frames[spinner.index])
