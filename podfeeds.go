@@ -177,6 +177,10 @@ func fetchFeed(feed string, i int, pages []Page, podcastTemplate *template.Templ
 
 			podcast.TOC = append(podcast.TOC, TOCEntry{GUID: item.GUID, Title: item.Title})
 
+			for _, enclosure := range parsedItem.Enclosures {
+				item.Enclosures = append(item.Enclosures, Enclosure{URL: enclosure.URL, Type: enclosure.Type})
+			}
+
 			if parsedItem.UpdatedParsed != nil {
 				item.Metadata = append(item.Metadata, Metadata{Key: "Updated", Value: parsedItem.UpdatedParsed.Format(time.RFC822)})
 			}
