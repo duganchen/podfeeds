@@ -77,6 +77,7 @@ type Page struct {
 	LastModified string
 	HTML         string // Full HTML page. gzipped and base64 encoded
 	Title        string
+	URL          string
 }
 
 func NewSpinner() *Spinner {
@@ -152,6 +153,8 @@ func fetchFeed(feed string, i int, pages []Page, podcastTemplate *template.Templ
 
 		pages[i].ETag = resp.Header.Get("Etag")
 		pages[i].LastModified = resp.Header.Get("Last-Modified")
+
+		pages[i].URL = feed
 
 		fp := gofeed.NewParser()
 		parsed, err := fp.Parse(resp.Body)
@@ -307,12 +310,26 @@ func build(clean bool) error {
 	pages := make([]Page, len(feeds))
 
 	cacheBytes, err := os.ReadFile("cache.json")
+	cacheLoaded := false
 	if err == nil {
-		json.Unmarshal(cacheBytes, &pages)
+		jsonErr := json.Unmarshal(cacheBytes, &pages)
+		if jsonErr != nil {
+			return jsonErr
+		}
+		cacheLoaded = true
 	}
 
-	if len(pages) != len(feeds) {
-		return errors.New("Stale cache. Please use podfeeds clean build")
+	if cacheLoaded {
+		if len(pages) != len(feeds) {
+			return errors.New("Cache build needed. Please use podfeeds build clean")
+		}
+
+		for i, feed := range feeds {
+			if pages[i].URL != feed {
+				fmt.Println(pages[i].URL, feed)
+				return errors.New("Cache build needed. Please use podfeeds build clean")
+			}
+		}
 	}
 
 	for i, feed := range feeds {
