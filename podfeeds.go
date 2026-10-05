@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,6 +68,13 @@ type Spinner struct {
 	mutex  sync.Mutex
 }
 
+type FeedInfo struct {
+	Subscription Subscription
+	Headers map[string]string
+	HTML []byte
+}
+
+
 func NewSpinner() *Spinner {
 	// AI also suggested this. Which, being UTF-8, is a bit more complicated to implement.
 	// "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
@@ -78,7 +86,7 @@ func help() {
 	fmt.Println("Usage: podfeeds (build|serve)")
 }
 
-func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeaders map[string]map[string]string, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
+func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[string]*FeedInfo, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
 
 	return func() error {
 
@@ -126,7 +134,10 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cachedHeade
 			newHeaders["If-Modified-Since"] = lastModified
 		}
 
-		cachedHeaders[feed] = newHeaders
+		cache[feed] = &FeedInfo{}
+		cache[feed].Headers = make(map[string]string)
+
+		maps.Copy(cache[feed].Headers, newHeaders)
 
 		fp := gofeed.NewParser()
 		parsed, err := fp.Parse(resp.Body)
@@ -259,14 +270,15 @@ func build() error {
 	g.SetLimit(20)
 	spinner := NewSpinner()
 
-	headers := make(map[string]map[string]string)
+	cache := make(map[string]*FeedInfo)
+
 	cacheBytes, err := os.ReadFile("cache.json")
 	if err == nil {
-		json.Unmarshal(cacheBytes, &headers)
+		json.Unmarshal(cacheBytes, &cache)
 	}
 
 	for i, feed := range feeds {
-		g.Go(fetchFeed(feed, subscriptions, i, headers, podcastTemplate, client, spinner))
+		g.Go(fetchFeed(feed, subscriptions, i, cache, podcastTemplate, client, spinner))
 	}
 
 	err = g.Wait()
@@ -274,7 +286,7 @@ func build() error {
 		return err
 	}
 
-	jsonData, err := json.MarshalIndent(headers, "", "  ")
+	jsonData, err := json.MarshalIndent(cache, "", "  ")
 	if err != nil {
 		return err
 	}
