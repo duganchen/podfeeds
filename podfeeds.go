@@ -329,10 +329,9 @@ func build(clean bool) error {
 
 	os.RemoveAll("_site.tmp")
 
-	subscriptions := make([]Subscription, len(feeds))
+	subscriptions := make([]Subscription, 0)
 	for _, feed := range feeds {
 		subscriptions = append(subscriptions, Subscription{Title: urlToPage[feed].Title, URL: savedFeedFilename(feed)})
-
 	}
 
 	indexTemplate := template.Must(template.ParseFiles("templates/index.html"))
