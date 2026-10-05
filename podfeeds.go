@@ -226,13 +226,22 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 		}
 
 		w := bufio.NewWriter(renderedPodcastFile)
-		w.Write(podcastBuffer.Bytes())
+		_, err = w.Write(podcastBuffer.Bytes())
 		defer renderedPodcastFile.Close()
+		if err != nil {
+			return err
+		}
 
 		var cachedHTMLBuffer bytes.Buffer
 		zw := gzip.NewWriter(&cachedHTMLBuffer)
-		zw.Write(podcastBuffer.Bytes())
-		zw.Close()
+		_, err = zw.Write(podcastBuffer.Bytes())
+		if err != nil {
+			return err
+		}
+		err = zw.Close()
+		if err != nil {
+			return err
+		}
 		cache[feed].HTML = base64.StdEncoding.EncodeToString(cachedHTMLBuffer.Bytes())
 
 		spinner.mutex.Lock()
