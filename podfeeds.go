@@ -78,6 +78,10 @@ type Page struct {
 	Title        string
 }
 
+type PageCache struct {
+	Pages []Page
+}
+
 func NewSpinner() *Spinner {
 	// AI also suggested this. Which, being UTF-8, is a bit more complicated to implement.
 	// "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
@@ -93,7 +97,7 @@ func savedFeedFilename(feed string) string {
 	return fmt.Sprintf("%x.html", sha256.Sum256([]byte(feed)))
 }
 
-func fetchFeed(feed string, urlToPage map[string]*Page, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
+func fetchFeed(feed string, i int, urlToPage map[string]*Page, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
 
 	return func() error {
 
@@ -292,8 +296,8 @@ func build(clean bool) error {
 		json.Unmarshal(cacheBytes, &urlToPage)
 	}
 
-	for _, feed := range feeds {
-		g.Go(fetchFeed(feed, urlToPage, podcastTemplate, client, spinner))
+	for i, feed := range feeds {
+		g.Go(fetchFeed(feed, i, urlToPage, podcastTemplate, client, spinner))
 	}
 
 	err = g.Wait()
