@@ -25,7 +25,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Some redundancy with Page (with )
 type Subscription struct {
 	Title string
 	URL   string
@@ -107,9 +106,13 @@ func fetchFeed(feed string, urlToPage map[string]*Page, podcastTemplate *templat
 		// Add the caching headers from the last build to the request
 
 		// Commenting this out while I fix cache hits
-		// for fieldName, fieldValue := range cachedHeaders[feed] {
-		// 	req.Header.Set(fieldName, fieldValue)
+
+		// if urlToPage[feed].LastModified != "" {
+		// 	req.Header.Set("If-Modified-Since", urlToPage[feed].LastModified)
+		// }
 		//
+		// if urlToPage[feed].ETag != "" {
+		// 	req.Header.Set("If-None-Match", urlToPage[feed].ETag)
 		// }
 
 		resp, err := client.Do(req)
@@ -329,9 +332,10 @@ func build(clean bool) error {
 
 	os.RemoveAll("_site.tmp")
 
-	subscriptions := make([]Subscription, 0)
-	for _, feed := range feeds {
-		subscriptions = append(subscriptions, Subscription{Title: urlToPage[feed].Title, URL: savedFeedFilename(feed)})
+	subscriptions := make([]Subscription, len(feeds))
+	for i, feed := range feeds {
+		subscriptions[i].Title = urlToPage[feed].Title
+		subscriptions[i].URL = savedFeedFilename(feed)
 	}
 
 	indexTemplate := template.Must(template.ParseFiles("templates/index.html"))
