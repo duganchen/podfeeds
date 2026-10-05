@@ -72,10 +72,10 @@ type Spinner struct {
 
 // Works well for json, which works well for the static site generator design
 type Page struct {
-	Subscription Subscription
-	ETag string
+	ETag         string
 	LastModified string
 	HTML         string // Full HTML page. gzipped and base64 encoded
+	Title        string
 }
 
 func NewSpinner() *Spinner {
@@ -130,7 +130,6 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 		cache[feed].ETag = resp.Header.Get("Etag")
 		cache[feed].LastModified = resp.Header.Get("Last-Modified")
 
-
 		fp := gofeed.NewParser()
 		parsed, err := fp.Parse(resp.Body)
 		if err != nil {
@@ -139,7 +138,8 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 		defer resp.Body.Close()
 
 		subscriptions[index] = Subscription{parsed.Title, renderedPodcastFilename}
-		cache[feed].Subscription = subscriptions[index]
+
+		cache[feed].Title = parsed.Title
 
 		var podcast Podcast
 		podcast.Language = parsed.Language
