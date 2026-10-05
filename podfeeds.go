@@ -220,7 +220,6 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 		}
 
 		var podcastBuffer bytes.Buffer
-		// err = podcastTemplate.Execute(renderedPodcastFile, podcast)
 		err = podcastTemplate.Execute(&podcastBuffer, podcast)
 		if err != nil {
 			return err
