@@ -86,7 +86,7 @@ func NewSpinner() *Spinner {
 }
 
 func help() {
-	fmt.Println("Usage: podfeeds (build|serve)")
+	fmt.Fprintln(os.Stderr, "Usage: podfeeds (build [clean]|serve)")
 }
 
 func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[string]*FeedInfo, podcastTemplate *template.Template, client *http.Client, spinner *Spinner) func() error {
@@ -253,7 +253,7 @@ func fetchFeed(feed string, subscriptions []Subscription, index int, cache map[s
 	}
 }
 
-func build() error {
+func build(clean bool) error {
 	feeds := make([]string, 0)
 
 	buf, err := os.ReadFile("./podcasts.yaml")
@@ -294,6 +294,11 @@ func build() error {
 	spinner := NewSpinner()
 
 	cache := make(map[string]*FeedInfo)
+
+	if clean {
+		// Ignoring the error here is deliberate
+		os.Remove("cache.json")
+	}
 
 	cacheBytes, err := os.ReadFile("cache.json")
 	if err == nil {
@@ -388,14 +393,14 @@ func serve() error {
 
 func main() {
 
-	if len(os.Args) != 2 {
+	if len(os.Args) != 2 && len(os.Args) != 3 {
 		help()
 		return
 	}
 
 	switch os.Args[1] {
 	case "build":
-		buildErr := build()
+		buildErr := build(len(os.Args) == 3 && os.Args[2] == "clean")
 		if buildErr != nil {
 			stat, notFound := os.Stat("_site.tmp")
 			if notFound == nil && stat.IsDir() {

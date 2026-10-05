@@ -59,7 +59,10 @@ Podfeeds is functionally a static site generator. Do the following with the repo
 
     ./podfeeds build
 
-That builds the site to \_site.
+That builds the site to \_site. Subsequent builds will avoid fetching, parsing and rendering feeds that haven't changed.
+You can override that to do a clean build:
+
+    ./podfeeds build
 
 Then, to serve it:
 
