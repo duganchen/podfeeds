@@ -3,6 +3,14 @@
 This is a podcast aggregator. Just as other aggregators use Chrome to present a GUI, this one uses Lynx to present a
 TUI.
 
+The rough workflow is:
+
+* set up Lynx, including integrations with mpv and HTTPie
+* use the *podfeed* script to query for URLs
+* use the *podfeeds* executable to build a site
+* open the site in Lynx
+* rebuild the site when you want to refresh your subscriptions
+
 ## Setting Up Lynx
 
 Set Lynx up to open media files in your favorite media player. For example, I have the following ~/.mailcap to get Lynx
