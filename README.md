@@ -142,6 +142,18 @@ Here is the KDL source code for the layout:
         }
     }
 
+# Podcast Site Project
+
+If you want the directory for building the static podcasts site to be separate from the directory for building the
+executable, that's easy to achieve. Just copy the templates/ and _site/ directories over, and run podfeeds from that
+directory.
+
+    cp podfeeds ~/.local/bin
+    mkdir ../podcast_site1
+    cp -r podcasts.yaml templates/ _site/ ../podcast_site1
+    cd ../podcast_site1
+    podfeeds
+
 ## Appendix A: Building Lynx
 
 Lynx needs to be built with --enable-externs, which is needed to enable downloading with a download manager.
